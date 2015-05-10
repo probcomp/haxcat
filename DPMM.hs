@@ -1,5 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
+module DPMM (bogoinit, gibbsSweep, DPMM, NIG) where
+
 import Control.Monad.State.Lazy
 import Data.Random.RVar
 import Data.Random.Distribution.Categorical (weightedCategorical)
@@ -15,12 +17,12 @@ type DatumID = Int
 data DPMM = DPMM { components :: Map ClusterID NIG
                  , assignment :: Map DatumID ClusterID
                  , dataset :: Map DatumID Double 
-                 }
+                 } deriving Show
 
 data NIG = NIG { count :: Int
                , sumx :: Double
                , sumxsq :: Double
-               }
+               } deriving Show 
 
 emptyNIG :: NIG
 emptyNIG = NIG 0 0 0 
