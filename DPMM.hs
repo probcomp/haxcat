@@ -27,16 +27,23 @@ bogoinit dataset = DPMM (M.singleton 0 component) assignment dataset'
 gibbsSweep :: DPMM -> RVar DPMM
 gibbsSweep = undefined 
 
-uninc :: DPMM -> Int -> DPMM 
-uninc DPMM{..} idx = DPMM components' (M.delete idx assignment) (M.delete idx dataset)
+uninc :: DatumID -> DPMM -> DPMM 
+uninc idx DPMM{..} = DPMM components' (M.delete idx assignment) (M.delete idx dataset)
     where components' = M.update (rmdatum datum) componentIdx components
           datum = fromJust $ M.lookup idx dataset
           componentIdx = fromJust $ M.lookup idx assignment
+
+reinc :: Double -> DatumID -> ClusterID -> DPMM -> DPMM
+reinc datum datumIdx componentIdx DPMM{..} = DPMM components' assignment' dataset'
+    where assignment' = M.insert datumIdx componentIdx assignment
+          dataset' = M.insert datumIdx datum dataset
+          components' = M.alter (addDatum datum) componentIdx components
 
 rmdatum :: Double -> NIG -> Maybe NIG
 rmdatum x NIG{count=1} = Nothing
 rmdatum x NIG{count=ct, sumx=sx, sumxsq=sx2} = Just $ NIG (ct - 1) (sx - x) (sx2 - x*x)
 
-addDatum :: Double -> NIG -> NIG
-addDatum x NIG{count=ct, sumx=sx, sumxsq=sx2} = NIG (ct + 1) (sx + x) (sx2 + x*x)
+addDatum :: Double -> Maybe NIG -> Maybe NIG
+addDatum x Nothing = Just $ NIG 1 x $ x*x
+addDatum x (Just NIG{count=ct, sumx=sx, sumxsq=sx2}) = Just $ NIG (ct + 1) (sx + x) (sx2 + x*x)
 
