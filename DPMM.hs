@@ -1,6 +1,9 @@
+{-# LANGUAGE RecordWildCards #-}
+
 import Data.Random.RVar
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Maybe
 
 type ClusterID = Int
 type DatumID = Int
@@ -24,9 +27,16 @@ bogoinit dataset = DPMM (M.singleton 0 component) assignment dataset'
 gibbsSweep :: DPMM -> RVar DPMM
 gibbsSweep = undefined 
 
-rmdatum :: NIG -> Double -> NIG
-rmdatum NIG{count=ct, sumx=sx, sumxsq=sx2} x = NIG (ct - 1) (sx - x) (sx2 - x*x)
+uninc :: DPMM -> Int -> DPMM 
+uninc DPMM{..} idx = DPMM components' (M.delete idx assignment) (M.delete idx dataset)
+    where components' = M.update (rmdatum datum) componentIdx components
+          datum = fromJust $ M.lookup idx dataset
+          componentIdx = fromJust $ M.lookup idx assignment
 
-addDatum :: NIG -> Double -> NIG
-addDatum NIG{count=ct, sumx=sx, sumxsq=sx2} x = NIG (ct + 1) (sx + x) (sx2 + x*x)
+rmdatum :: Double -> NIG -> Maybe NIG
+rmdatum x NIG{count=1} = Nothing
+rmdatum x NIG{count=ct, sumx=sx, sumxsq=sx2} = Just $ NIG (ct - 1) (sx - x) (sx2 - x*x)
+
+addDatum :: Double -> NIG -> NIG
+addDatum x NIG{count=ct, sumx=sx, sumxsq=sx2} = NIG (ct + 1) (sx + x) (sx2 + x*x)
 
