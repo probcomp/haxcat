@@ -6,8 +6,8 @@ type ClusterID = Int
 type DatumID = Int
 
 data DPMM = DPMM { components :: Map ClusterID NIG
-                 , assignment :: [ClusterID]
-                 , dataset :: [Double]
+                 , assignment :: Map DatumID ClusterID
+                 , dataset :: Map DatumID Double 
                  }
 
 data NIG = NIG { count :: Int
@@ -16,9 +16,10 @@ data NIG = NIG { count :: Int
                }
 
 bogoinit :: [Double] -> DPMM
-bogoinit dataset = DPMM (M.singleton 0 component) assignment dataset
+bogoinit dataset = DPMM (M.singleton 0 component) assignment dataset'
     where component = NIG (length dataset) (sum dataset) (sum $ map (\ x -> x*x) dataset)
-          assignment = replicate (length dataset) 0
+          assignment = M.fromList [(idx, 0) | idx <- [0..length dataset - 1]]
+          dataset' = M.fromList (zip [0..] dataset)
 
 gibbsSweep :: DPMM -> RVar DPMM
 gibbsSweep = undefined 
