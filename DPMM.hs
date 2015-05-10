@@ -1,6 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
+import Control.Monad.State.Lazy
 import Data.Random.RVar
+import Data.Random.Distribution.Categorical (weightedCategorical)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -45,6 +47,9 @@ getweights datum DPMM{..} = new:existing
           existing = [(componentIdx, logp datum cmpnt + log (fromIntegral (count cmpnt)))
                       | (componentIdx, cmpnt) <- M.toList components] 
 
+flipweights :: [(ClusterID, Double)] -> RVar ClusterID
+flipweights weights = weightedCategorical [(exp (p - maxp), idx) | (idx, p) <- weights]
+    where maxp = maximum $ map snd weights
 
 niglognorm :: Double -> Double -> Double -> Double
 niglognorm r nu s = 0.5*(nu+1) * log 2 + 0.5 * log pi - 0.5 *log r - 0.5*nu * log s + logGamma (nu/2)
@@ -56,10 +61,26 @@ bogoinit dataset = DPMM (M.singleton 0 component) assignment dataset'
           dataset' = M.fromList (zip [0..] dataset)
 
 gibbsSweep :: DPMM -> RVar DPMM
-gibbsSweep = undefined 
+gibbsSweep dpmm = execStateT (gibbsSweepT $ M.keys $ dataset dpmm) dpmm
 
-uninc :: DatumID -> DPMM -> DPMM 
-uninc idx DPMM{..} = DPMM components' (M.delete idx assignment) (M.delete idx dataset)
+gibbsSweepT :: [DatumID] -> StateT DPMM RVar ()
+gibbsSweepT = mapM_ stepT 
+
+stepT :: DatumID -> StateT DPMM RVar ()
+stepT idx = do
+    dpmm <- get
+    dpmm' <- lift $ step idx dpmm
+    put dpmm'
+
+step :: DatumID -> DPMM -> RVar DPMM
+step idx dpmm = do
+    let (datum, dpmm') = uninc idx dpmm
+    let weights = getweights datum dpmm'
+    clusterid <- flipweights weights
+    return $ reinc datum idx clusterid dpmm'
+
+uninc :: DatumID -> DPMM -> (Double, DPMM)
+uninc idx DPMM{..} = (datum, DPMM components' (M.delete idx assignment) (M.delete idx dataset))
     where components' = M.update (rmdatum datum) componentIdx components
           datum = fromJust $ M.lookup idx dataset
           componentIdx = fromJust $ M.lookup idx assignment
