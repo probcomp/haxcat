@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module DPMM (train_dpmm, bogoinit, gibbsSweep, DPMM(..), NIG) where
+module DPMM (train_dpmm, bogoinit, gibbsSweep, DPMM(..), predictive_logdensity, NIG) where
 
 import Control.Monad.State.Lazy
 import Data.Random.RVar
@@ -86,6 +86,12 @@ getweights datum DPMM{..} = new:existing
     where new = (fst (M.findMax components) + 1, logp datum emptyNIG + 0)
           existing = [(componentIdx, logp datum cmpnt + log (fromIntegral (count cmpnt)))
                       | (componentIdx, cmpnt) <- M.toList components]
+
+-- Predictive log density for a new datum
+predictive_logdensity :: DPMM -> Double -> Double
+predictive_logdensity dpmm datum = logsumexp weights where
+  correction = log $ fromIntegral $ M.size $ dataset dpmm
+  weights = map (\x -> x - correction) $ map snd $ getweights datum dpmm
 
 -- Gibbs sweep, reassigning every datum
 gibbsSweep :: DPMM -> RVar DPMM
