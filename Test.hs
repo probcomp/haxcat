@@ -1,6 +1,8 @@
 module Test where
 
 import DPMM
+import Data.RVar (sampleRVar)
+import Data.Random
 import Data.Random.RVar
 import Data.Random.Distribution.Normal
 import Control.Monad
@@ -22,3 +24,13 @@ gendata :: DataGen
 gendata ndata = liftM2 (++) (replicateM (ndata `div` 2) $ normal (-3) 1) (replicateM (ndata `div` 2) $ normal 3 1)
 
 
+certainty_test :: DataGen -> (DPMM -> a) -> Int -> Int -> RVar a
+certainty_test gen k data_ct iter_ct = do
+  input <- gen data_ct
+  output <- train_dpmm input iter_ct
+  return $ k output
+
+sampleIO :: RVar a -> IO a
+sampleIO = sampleRVar
+
+-- e.g. sampleIO (certainty_test gendata components 300 300)
