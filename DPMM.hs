@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module DPMM (bogoinit, gibbsSweep, DPMM, NIG) where
+module DPMM (train_dpmm, bogoinit, gibbsSweep, DPMM(..), NIG) where
 
 import Control.Monad.State.Lazy
 import Data.Random.RVar
@@ -67,6 +67,11 @@ data DPMM = DPMM { components :: Map ClusterID NIG
                  , dataset :: Map DatumID Double
                  } deriving Show
 
+-- Facade
+
+train_dpmm :: [Double] -> Int -> RVar DPMM
+train_dpmm input iters = execStateT (replicateM iters gibbsSweepT) $ bogoinit input
+
 -- Initialization
 
 -- Put everything into one component
@@ -87,10 +92,12 @@ getweights datum DPMM{..} = new:existing
 
 -- Gibbs sweep, reassigning every datum
 gibbsSweep :: DPMM -> RVar DPMM
-gibbsSweep dpmm = execStateT (gibbsSweepT $ M.keys $ dataset dpmm) dpmm
+gibbsSweep dpmm = execStateT gibbsSweepT dpmm
 
-gibbsSweepT :: [DatumID] -> StateT DPMM RVar ()
-gibbsSweepT = mapM_ stepT
+gibbsSweepT :: StateT DPMM RVar ()
+gibbsSweepT = do
+  datums <- liftM M.keys $ gets dataset
+  mapM_ stepT datums
 
 stepT :: DatumID -> StateT DPMM RVar ()
 stepT idx = do
