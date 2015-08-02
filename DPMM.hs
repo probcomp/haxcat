@@ -4,15 +4,12 @@ module DPMM (train_dpmm, bogoinit, gibbsSweep, DPMM(..), NIG) where
 
 import Control.Monad.State.Lazy
 import Data.Random.RVar
-import Data.Random.Distribution.Categorical (weightedCategorical)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
 import Numeric.SpecFunctions (logGamma)
 
-flipweights :: [(ClusterID, Double)] -> RVar ClusterID
-flipweights weights = weightedCategorical [(exp (p - maxp), idx) | (idx, p) <- weights]
-    where maxp = maximum $ map snd weights
+import Utils
 
 ----------------------------------------------------------------------
 -- Normal-Inverse-Gamma Normal component model                      --
