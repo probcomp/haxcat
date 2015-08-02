@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module DPMM (train_dpmm, bogoinit, gibbsSweep, DPMM(..), predictive_logdensity, NIG) where
+module DPMM where
 
 import Control.Monad.State.Lazy
 import Data.Random.RVar
