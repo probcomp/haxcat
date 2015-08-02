@@ -1,12 +1,14 @@
 module Test where
 
-import DPMM
 import Data.RVar (sampleRVar)
 import Data.Random
 import Data.Random.RVar
 import Data.Random.Distribution.Bernoulli
 import Data.Random.Distribution.Normal
 import Control.Monad
+
+import Utils
+import DPMM
 
 yellow :: [Double]
 yellow = [-2.8564300066900277,-4.188490584983449,-2.4034375652902247,-1.310045694324143,-2.46509266606692,
@@ -19,6 +21,9 @@ type LogDensity = Double -> Double
 type Dist = (Sampler, LogDensity)
 
 type DataGen = Int -> RVar [Double]
+
+mixture_density :: [LogDensity] -> LogDensity
+mixture_density ds x = logsumexp (map ($ x) ds) - log (fromIntegral $ length ds)
 
 -- This is a mixture of two Gaussians (-3/1 and 3/1), implemented by
 -- deterministically making half the data points from one and half
@@ -39,6 +44,12 @@ gendata :: DataGen
 gendata ndata = liftM2 (++) (replicateM (ndata `div` 2) $ normal (-3) 1) (replicateM (ndata `div` 2) $ normal 3 1)
 
 
+estimate_KL :: Dist -> LogDensity -> Int -> RVar Double
+estimate_KL from to sample_ct = do
+  input <- replicateM sample_ct (fst from)
+  return $ (sum $ map term input) / (fromIntegral $ length input)
+    where term x = (snd from) x - to x
+
 certainty_test :: DataGen -> (DPMM -> a) -> Int -> Int -> RVar a
 certainty_test gen k data_ct iter_ct = do
   input <- gen data_ct
@@ -49,3 +60,10 @@ sampleIO :: RVar a -> IO a
 sampleIO = sampleRVar
 
 -- e.g. sampleIO (certainty_test gendata components 300 300)
+
+measure_kl :: Dist -> Int -> Int -> Int -> Int -> RVar Double
+measure_kl data_gen train_data_ct iter_ct chain_ct test_ct = do
+  input <- replicateM train_data_ct (fst data_gen)
+  results <- replicateM chain_ct $ train_dpmm input iter_ct
+  let result_density = mixture_density (map predictive_logdensity results)
+  estimate_KL data_gen result_density test_ct
