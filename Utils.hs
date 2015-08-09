@@ -8,6 +8,6 @@ flipweights weights = weightedCategorical [(exp (p - maxp), idx) | (idx, p) <- w
     where maxp = maximum $ map snd weights
 
 logsumexp :: [Double] -> Double
-logsumexp xs = (log $ sum $ map exp adjusted) - max where
+logsumexp xs = (log $ sum $ map exp adjusted) + max where
     adjusted = map (\x -> x - max) xs
     max = maximum xs

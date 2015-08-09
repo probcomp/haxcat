@@ -71,4 +71,4 @@ measure_dpmm_kl data_gen train_data_ct iter_ct chain_ct test_ct = do
 sampleIO :: RVar a -> IO a
 sampleIO = sampleRVar
 
--- e.g. sampleIO $ measure_dpmm_kl two_modes 1000 20 10 500
+-- e.g. sampleIO $ measure_dpmm_kl two_modes 1000 20 10 500 is ~1-9e-2
