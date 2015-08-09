@@ -26,8 +26,8 @@ emptyNIG = NIG 0 0 0
 -- I assume this is the log density of the given data point in the
 -- given NIG cluster, hardcoding the hyperparameters to m = 0, r = 1,
 -- nu = 1, s = 1.
-logp :: Double -> NIG -> Double
-logp datum NIG{..} = -0.5*log (2*pi) + niglognorm r'' nu'' s'' - niglognorm r' nu' s'
+logp :: NIG -> Double -> Double
+logp NIG{..} datum = -0.5*log (2*pi) + niglognorm r'' nu'' s'' - niglognorm r' nu' s'
     where r' = r + count'
           nu' =  nu + count'
           m' = (r*m + sumx)/r'
@@ -83,8 +83,8 @@ bogoinit dataset = DPMM (M.singleton 0 component) assignment dataset'
 -- Weight of the datum in every component (inc. a new one)
 getweights :: Double -> DPMM -> [(ClusterID, Double)]
 getweights datum DPMM{..} = new:existing
-    where new = (fst (M.findMax components) + 1, logp datum emptyNIG + 0)
-          existing = [(componentIdx, logp datum cmpnt + log (fromIntegral (count cmpnt)))
+    where new = (fst (M.findMax components) + 1, logp emptyNIG datum + 0)
+          existing = [(componentIdx, logp cmpnt datum + log (fromIntegral (count cmpnt)))
                       | (componentIdx, cmpnt) <- M.toList components]
 
 -- Predictive log density for a new datum
