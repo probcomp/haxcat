@@ -10,15 +10,15 @@ import Control.Monad
 import Utils
 import DPMM
 
-type Sampler = RVar Double
-type LogDensity = Double -> Double
-type Dist = (Sampler, LogDensity)
+type LogDensity a = a -> Double
+type Assessable a = (RVar a, LogDensity a)
 
-mixture_density :: [LogDensity] -> LogDensity
+
+mixture_density :: [LogDensity a] -> LogDensity a
 mixture_density ds x = logsumexp (map ($ x) ds) - log (fromIntegral $ length ds)
 
 -- This is a mixture of two Gaussians (-3/1 and 3/1).
-two_modes :: Dist
+two_modes :: Assessable Double
 two_modes = (sample, logd) where
     sample = do
       pos_mode <- bernoulli (0.5 :: Double)
@@ -28,13 +28,13 @@ two_modes = (sample, logd) where
           normal (-3) 1
     logd x = logsumexp [logPdf (Normal 3 1) x, logPdf (Normal (-3) 1) x] - log 2
 
-estimate_KL :: Dist -> LogDensity -> Int -> RVar Double
+estimate_KL :: Assessable a -> LogDensity a -> Int -> RVar Double
 estimate_KL from to sample_ct = do
   input <- replicateM sample_ct (fst from)
   return $ (sum $ map term input) / (fromIntegral $ length input)
     where term x = (snd from) x - to x
 
-measure_kl :: Dist -> Int -> Int -> Int -> Int -> RVar Double
+measure_kl :: Assessable Double -> Int -> Int -> Int -> Int -> RVar Double
 measure_kl data_gen train_data_ct iter_ct chain_ct test_ct = do
   input <- replicateM train_data_ct (fst data_gen)
   results <- replicateM chain_ct $ train_dpmm input iter_ct
