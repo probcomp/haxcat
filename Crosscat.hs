@@ -224,7 +224,7 @@ column_full_p (Column _ suff_stats) = undefined
 view_alpha :: Log Double
 view_alpha = Exp 0
 
-col_weights :: Column a -> Crosscat -> [(ViewID, Log Double)]
+col_weights :: Column d m -> Crosscat -> [(ViewID, Log Double)]
 col_weights col Crosscat {..} = do
     new_partition <- (undefined :: Partition)
     return $ (new_id, new_p new_partition):existing
