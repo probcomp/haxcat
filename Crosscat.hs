@@ -1,5 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
@@ -20,7 +21,7 @@ import Utils (choose)
 
 newtype RowID = RowID Int
 newtype ColID = ColID Int
-newtype ViewID = ViewID Int
+newtype ViewID = ViewID Int deriving Enum
 newtype ClusterID = ClusterID Int
 
 -- Can probably get away with making this unboxed
@@ -229,7 +230,7 @@ col_weights col Crosscat {..} = do
     new_partition <- (undefined :: RVar Partition)
     return $ (new_id, new_p new_partition):existing
         where
-          new_id = fst (M.findMax zzz) + 1
+          new_id = succ $ fst (M.findMax zzz)
           new_p :: Partition -> Log Double
           new_p new_partition = (column_full_p $ repartition new_partition col)
                                 * view_alpha
