@@ -6,6 +6,7 @@ module Crosscat where
 import qualified Data.Map as M
 import qualified Data.Vector as V
 
+import Data.Random.Distribution.Bernoulli (bernoulli)
 import Data.Random.RVar
 import Numeric.Log
 
@@ -53,7 +54,7 @@ instance ComponentModel BetaBernoulli TFCount Bool where
         Exp $ log $ alpha / (alpha + beta)
     logpdf_predictive (BBM (alpha, beta)) (TFC (t, f)) False =
         Exp $ log $ beta / (alpha + beta)
-    sample_predictive (BBM (alpha, beta)) = bernoulli alpha beta
+    sample_predictive (BBM (alpha, beta)) = bernoulli (alpha/(alpha + beta))
 
 data GaussStats = GaussStats {
       gauss_n :: Int,
