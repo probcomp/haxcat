@@ -129,7 +129,8 @@ instance ComponentModel NIGNormal GaussStats Double where
               + logGamma (nu/2)
 
     sample_predictive NIGNormal{..} = do
-      std_t <- T.t nign_nu
+      -- TODO Find a t distribution that admits real degrees of freedom.
+      std_t <- T.t $ floor nign_nu
       return $ std_t * scale + nign_mu
         where scale = sqrt(nign_s * (nign_r + 1) / (nign_nu / 2 * nign_r))
 
