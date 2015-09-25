@@ -58,9 +58,9 @@ instance ComponentModel BetaBernoulli TFCount Bool where
     logpdf_marginal (BBM (alpha, beta)) (TFC (t, f)) (BBM (alpha', beta')) =
         choose (t + f) t
           * (Exp $ logBeta alpha' beta') / (Exp $ logBeta alpha beta)
-    logpdf_predictive (BBM (alpha, beta)) (TFC (t, f)) True =
+    logpdf_predictive (BBM (alpha, beta)) True =
         Exp $ log $ alpha / (alpha + beta)
-    logpdf_predictive (BBM (alpha, beta)) (TFC (t, f)) False =
+    logpdf_predictive (BBM (alpha, beta)) False =
         Exp $ log $ beta / (alpha + beta)
     sample_predictive (BBM (alpha, beta)) = bernoulli (alpha/(alpha + beta))
 
@@ -87,7 +87,7 @@ instance Statistic GaussStats Double where
                      gauss_nvar = gauss_nvar - delta*(x-gauss_mean)
                    } where
             n' = gauss_n - 1
-            mean' = (gauss_n*gauss_mean - x)/n'
+            mean' = (fromIntegral gauss_n * gauss_mean - x) / fromIntegral n'
             delta = x - mean'
 
 gauss_sum :: GaussStats -> Double
@@ -111,14 +111,14 @@ instance ComponentModel NIGNormal GaussStats Double where
     -- quantities that GaussStats actually maintains.
     update NIGNormal{..} stats = NIGNormal r' nu' s' mu'
         where
-          r' = nign_r + gauss_n stats
-          nu' = nign_nu + gauss_n stats
+          r' = nign_r + fromIntegral (gauss_n stats)
+          nu' = nign_nu + fromIntegral (gauss_n stats)
           mu' = (nign_r*nign_mu + gauss_sum stats) / r'
           s' = nign_s + gauss_sum_sq stats +
                nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
     logpdf_marginal hypers GaussStats{..} hypers' =
-        (niglognorm hypers' / niglognorm hypers) / (root_2pi ** gauss_n)
+        (niglognorm hypers' / niglognorm hypers) / (root_2pi ^^ gauss_n)
         where
           -- This is calc_continuous_log_Z from numerics.cpp in crosscat
           -- TODO Copy the actual reference?
