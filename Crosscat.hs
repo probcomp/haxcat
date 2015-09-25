@@ -9,6 +9,7 @@ import qualified Data.Vector as V
 import Data.Random.Distribution.Bernoulli (bernoulli)
 import Data.Random.RVar
 import Numeric.Log
+import Numeric.SpecFunctions (logGamma, logBeta)
 
 newtype RowID = RowID Int
 newtype ColID = ColID Int
@@ -49,7 +50,7 @@ instance ComponentModel BetaBernoulli TFCount Bool where
         (BBM (alpha + fromIntegral t, beta + fromIntegral f))
     logpdf_marginal (BBM (alpha, beta)) (TFC (t, f)) (BBM (alpha', beta')) =
         (Exp $ logchoose (t + f) t)
-          * (Exp $ logbeta alpha' beta') / (Exp $ logbeta alpha beta)
+          * (Exp $ logBeta alpha' beta') / (Exp $ logBeta alpha beta)
     logpdf_predictive (BBM (alpha, beta)) (TFC (t, f)) True =
         Exp $ log $ alpha / (alpha + beta)
     logpdf_predictive (BBM (alpha, beta)) (TFC (t, f)) False =
