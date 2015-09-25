@@ -11,6 +11,8 @@ import Data.Random.RVar
 import Numeric.Log
 import Numeric.SpecFunctions (logGamma, logBeta)
 
+import Utils (choose)
+
 newtype RowID = RowID Int
 newtype ColID = ColID Int
 newtype ViewID = ViewID Int
@@ -49,7 +51,7 @@ instance ComponentModel BetaBernoulli TFCount Bool where
     update (BBM (alpha, beta)) (TFC (t, f)) =
         (BBM (alpha + fromIntegral t, beta + fromIntegral f))
     logpdf_marginal (BBM (alpha, beta)) (TFC (t, f)) (BBM (alpha', beta')) =
-        (Exp $ logchoose (t + f) t)
+        choose (t + f) t
           * (Exp $ logBeta alpha' beta') / (Exp $ logBeta alpha beta)
     logpdf_predictive (BBM (alpha, beta)) (TFC (t, f)) True =
         Exp $ log $ alpha / (alpha + beta)
