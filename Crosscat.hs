@@ -7,6 +7,7 @@ import qualified Data.Map as M
 import qualified Data.Vector as V
 
 import Data.Random.Distribution.Bernoulli (bernoulli)
+import qualified Data.Random.Distribution.T as T
 import Data.Random.RVar
 import Numeric.Log
 import Numeric.SpecFunctions (logGamma, logBeta)
@@ -122,7 +123,9 @@ instance ComponentModel NIGNormal GaussStats Double where
               0.5*nu * (log 2 - log s) + 0.5 * log (2*pi) - 0.5 * log r
               + logGamma (nu/2)
 
-    sample_predictive NIGNormal{..} = student_t nign_nu * scale + nign_mu
+    sample_predictive NIGNormal{..} = do
+      std_t <- T.t nign_nu
+      return $ std_t * scale + nign_mu
         where scale = sqrt(nign_s * (nign_r + 1) / (nign_nu / 2 * nign_r))
 
 data Component = forall hypers suffstats element.
