@@ -1,5 +1,5 @@
-{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -134,16 +134,12 @@ instance ComponentModel NIGNormal GaussStats Double where
       return $ std_t * scale + nign_mu
         where scale = sqrt(nign_s * (nign_r + 1) / (nign_nu / 2 * nign_r))
 
-data Component = forall hypers suffstats element.
-    (ComponentModel hypers suffstats element)
-    => Component {
-      suffstats :: suffstats,
-      hypers :: hypers
-    }
-
--- TODO: I want the model type to determine the data type, but not
--- vice versa (i.e., Gaussians or VonMises can only model Doubles)
-data Column datum model = Column (ColumnData datum) (M.Map ClusterID model)
+-- Choice point: Are cluster hypers per-cluster or shared across all
+-- the clusters in a column?
+-- - Decision: The latter seems to make more sense to me, so I'll do that.
+data Column = forall hypers stats element.
+    (ComponentModel hypers stats element)
+    => Column (ColumnData element) hypers (M.Map ClusterID stats)
 
 -- I may want to make the dataset a heterogeneous typed data frame along
 -- the lines of https://github.com/acowley/Frames but I am not sure I
@@ -152,6 +148,7 @@ data Column datum model = Column (ColumnData datum) (M.Map ClusterID model)
 -- - And "Carter's Library", referenced from
 --   https://www.reddit.com/r/haskell/comments/2dd2um/what_are_some_haskell_alternatives_to_pandasnumpy/,
 --   which is allegedly online.
+-- - Decision for now: hide the type with an existentials
 
 type Partition = M.Map RowID ClusterID
 
@@ -163,7 +160,7 @@ type Partition = M.Map RowID ClusterID
 -- Decision: shared.
 
 data Crosscat = Crosscat { xxx :: M.Map ColID ViewID
-                         , yyy :: M.Map ColID (forall d m. Column d m)
+                         , yyy :: M.Map ColID Column
                          , zzz :: M.Map ViewID Partition
                          }
 
@@ -213,20 +210,18 @@ data Crosscat = Crosscat { xxx :: M.Map ColID ViewID
 recompute_suff_stats :: Partition -> ColumnData d -> (M.Map ClusterID model)
 recompute_suff_stats = undefined
 
-repartition :: Partition -> Column d m -> Column d m
-repartition p (Column d _) =
-    -- Methinks hyperparameter values should also just come along for
-    -- the ride
-    Column d $ recompute_suff_stats p d
+repartition :: Partition -> Column -> Column
+repartition p (Column d hypers _) =
+    Column d hypers $ recompute_suff_stats p d
 
-column_full_p :: Column d m -> Log Double
-column_full_p (Column _ suff_stats) = undefined
+column_full_p :: Column -> Log Double
+column_full_p (Column _ hypers suff_stats) = undefined
 
 -- TODO Will eventually want to do hyperparameter inference on this
 view_alpha :: Log Double
 view_alpha = Exp 0
 
-col_weights :: Column d m -> Crosscat -> RVar [(ViewID, Log Double)]
+col_weights :: Column -> Crosscat -> RVar [(ViewID, Log Double)]
 col_weights col Crosscat {..} = do
     new_partition <- (undefined :: RVar Partition)
     return $ (new_id, new_p new_partition):existing
