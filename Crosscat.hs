@@ -224,12 +224,13 @@ column_full_p (Column _ suff_stats) = undefined
 view_alpha :: Log Double
 view_alpha = Exp 0
 
-col_weights :: Column d m -> Crosscat -> [(ViewID, Log Double)]
+col_weights :: Column d m -> Crosscat -> RVar [(ViewID, Log Double)]
 col_weights col Crosscat {..} = do
-    new_partition <- (undefined :: Partition)
+    new_partition <- (undefined :: RVar Partition)
     return $ (new_id, new_p new_partition):existing
         where
           new_id = fst (M.findMax zzz) + 1
+          new_p :: Partition -> Log Double
           new_p new_partition = (column_full_p $ repartition new_partition col)
                                 * view_alpha
           existing = [(v_id, (column_full_p $ repartition partition col)
