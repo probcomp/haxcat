@@ -1,6 +1,9 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -44,7 +47,7 @@ instance ComponentModel (Mixture prior p_stats comp c_stats element)
     (NoStat element) element where
     update mix _ = mix
     pdf_marginal = undefined -- Intractable, I think
-    pdf_predictive mix x -- Involves cluster ids and weights, and a Log.sum
+    pdf_predictive mix x = undefined -- Involves cluster ids and weights, and a Log.sum
 
 -- Note: As written here, Crosscat will not end up being a very nice
 -- CRP mixture of CRP mixtures, because either
