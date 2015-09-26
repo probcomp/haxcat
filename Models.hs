@@ -22,6 +22,12 @@ class Statistic stat element | stat -> element where
     insert :: stat -> element -> stat
     remove :: stat -> element -> stat
 
+data NoStat a = NoStat
+instance Statistic (NoStat a) a where
+    empty = NoStat
+    insert _ _ = NoStat
+    remove _ _ = NoStat
+
 class (Statistic suffstats element) => ComponentModel hypers suffstats element
         | hypers -> suffstats element where
     update :: hypers -> suffstats -> hypers

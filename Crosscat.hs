@@ -25,6 +25,34 @@ type ColumnData a = V.Vector a
 -- Choice point: Are cluster hypers per-cluster or shared across all
 -- the clusters in a column?
 -- - Decision: The latter seems to make more sense to me, so I'll do that.
+data Mixture prior p_stats comp c_stats element =
+    ( ComponentModel prior p_stats ClusterID
+    , ComponentModel comp c_stats element
+    ) => Mixture { prior :: prior
+                 , p_stats :: p_stats
+                 , c_hypers :: comp
+                 , elements :: ColumnData element
+                 , assignment :: M.Map RowID ClusterID
+                 , components :: M.Map ClusterID c_stats
+                 , enumerate :: prior -> [ClusterID] -- TODO Put this in a class?
+                 }
+-- Invariant: the p_stats have to agree with the assignment (that is,
+-- the assignment must be the data set that the p_stats are the
+-- statistics of).
+
+instance ComponentModel (Mixture prior p_stats comp c_stats element)
+    (NoStat element) element where
+    update mix _ = mix
+    pdf_marginal = undefined -- Intractable, I think
+    pdf_predictive mix x -- Involves cluster ids and weights, and a Log.sum
+
+-- Note: As written here, Crosscat will not end up being a very nice
+-- CRP mixture of CRP mixtures, because either
+-- - the inner mixtures would correspond to views, and so would need
+--   to be over funny records that span all the columns
+-- - or the inner mixtures would correspond to columns, and so would
+--   need to share their assignments
+
 data Column = forall hypers stats element.
     (ComponentModel hypers stats element)
     => Column (ColumnData element) hypers (M.Map ClusterID stats)
