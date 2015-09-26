@@ -4,7 +4,10 @@
 
 module Models where
 
+import qualified Data.Map as M
+
 import Data.Random.Distribution.Bernoulli (bernoulli)
+import Data.Random.Distribution.Categorical (weightedCategorical)
 import qualified Data.Random.Distribution.T as T
 import Data.Random.RVar
 import Numeric.Log
@@ -120,3 +123,39 @@ instance ComponentModel NIGNormal GaussStats Double where
       std_t <- T.t $ floor nign_nu
       return $ std_t * scale + nign_mu
         where scale = sqrt(nign_s * (nign_r + 1) / (nign_nu / 2 * nign_r))
+
+newtype Counts a = Counts (M.Map a Int)
+instance Statistic (Counts a) a where
+    empty = M.empty
+    insert (Counts m) x = Counts $ M.alter inc m where
+                                inc Nothing = Just 1
+                                inc (Just n) = Just (n+1)
+    remove (Counts m) x = Counts $ M.alter dec m where
+                                dec (Just 1) = Nothing
+                                dec (Just n) = Just (n-1)
+
+counts_total :: Counts a -> Int -- TODO Store this in the counts object itself?
+counts_total (Counts m) = sum $ M.elems m
+
+merge :: Counts a -> Counts a -> Counts a
+merge (Counts m1) (Counts m2) = Counts $ M.unionWith (+)
+
+-- CRP is different because it's collapsed without being conjugate.
+-- Hack it by including the counts in the "hypers"
+data CRP a = CRP a Double (Counts a)
+instance (Eq a, Ord a, Enum a) => ComponentModel CRP (Counts a) a where
+    update (CRP zero alpha cs1) cs2 = CRP zero alpha $ cs1 `merge` cs2
+    pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
+    pdf_predictive (CRP zero alpha cs) x = mine / total where
+        mine = Exp $ log $ maybe alpha $ fmap fromIntegral $ M.lookup x cs
+        total = Exp $ log $ alpha + fromIntegral $ counts_total cs
+    sample_predictive crp = weightedCategorical w where
+      w = [(pdf_predictive crp idx, idx) | idx <- enumerate_crp crp]
+
+enumerate_crp :: (Enum a) => CRP a -> [a]
+enumerate_crp (CRP zero _ (Counts cs)) =
+    if M.null cs then
+        [zero]
+    else
+        new : M.keys cs where
+            new = succ $ fst $ M.findMax cs
