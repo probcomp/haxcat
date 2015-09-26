@@ -35,13 +35,13 @@ class Statistic stat element | stat -> element where
 class (Statistic suffstats element) => ComponentModel hypers suffstats element
         | hypers -> suffstats element where
     update :: hypers -> suffstats -> hypers
-    logpdf_marginal :: hypers -> suffstats -> hypers -> Log Double
+    logpdf_marginal :: hypers -> suffstats -> Log Double
     logpdf_predictive :: hypers -> element -> Log Double
     sample_predictive :: hypers -> RVar element
 
     logpdf_predictive hypers x = pdf' / pdf where
-        pdf  = logpdf_marginal hypers empty hypers
-        pdf' = logpdf_marginal hypers single (update hypers single)
+        pdf  = logpdf_marginal hypers empty
+        pdf' = logpdf_marginal hypers single
         single = insert empty x
 
 newtype TFCount = TFC (Int, Int)
@@ -56,9 +56,10 @@ newtype BetaBernoulli = BBM (Double, Double)
 instance ComponentModel BetaBernoulli TFCount Bool where
     update (BBM (alpha, beta)) (TFC (t, f)) =
         (BBM (alpha + fromIntegral t, beta + fromIntegral f))
-    logpdf_marginal (BBM (alpha, beta)) (TFC (t, f)) (BBM (alpha', beta')) =
+    logpdf_marginal h@(BBM (alpha, beta)) s@(TFC (t, f)) =
         choose (t + f) t
           * (Exp $ logBeta alpha' beta') / (Exp $ logBeta alpha beta)
+              where  (BBM (alpha', beta')) = update h s
     logpdf_predictive (BBM (alpha, beta)) True =
         Exp $ log $ alpha / (alpha + beta)
     logpdf_predictive (BBM (alpha, beta)) False =
@@ -118,9 +119,10 @@ instance ComponentModel NIGNormal GaussStats Double where
           s' = nign_s + gauss_sum_sq stats +
                nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
-    logpdf_marginal hypers GaussStats{..} hypers' =
+    logpdf_marginal hypers stats@GaussStats{..} =
         (niglognorm hypers' / niglognorm hypers) / (root_2pi ^^ gauss_n)
         where
+          hypers' = update hypers stats
           -- This is calc_continuous_log_Z from numerics.cpp in crosscat
           -- TODO Copy the actual reference?
           niglognorm :: NIGNormal -> Log Double
