@@ -49,7 +49,7 @@ class (Statistic stat elt) => CompoundModel m stat elt
         pdf  = pdf_marginal m stats
         pdf' = pdf_marginal m (insert x stats)
 
-class (CompoundModel m stat elt) => ConjugateModel m stat elt
+class (Model m elt, CompoundModel m stat elt) => ConjugateModel m stat elt
   where
     update :: stat -> m -> m
     -- update empty = id
@@ -64,7 +64,7 @@ conjugate_pdf_predictive suffstats model =
     pdf (update suffstats model)
 
 conjugate_sample_predictive :: (ConjugateModel m stat elt)
-    => stat -> m -> RVar element
+    => stat -> m -> RVar elt
 conjugate_sample_predictive suffstats model =
     sample (update suffstats model)
 
@@ -86,7 +86,7 @@ instance CompoundModel BetaBernoulli TFCount Bool where
     pdf_marginal h@(BBM (alpha, beta)) s@(TFC (t, f)) =
         choose (t + f) t
           * (Exp $ logBeta alpha' beta') / (Exp $ logBeta alpha beta)
-              where  (BBM (alpha', beta')) = update h s
+              where  (BBM (alpha', beta')) = update s h
     pdf_predictive = conjugate_pdf_predictive
     sample_predictive = conjugate_sample_predictive
 instance ConjugateModel BetaBernoulli TFCount Bool where
@@ -151,7 +151,7 @@ instance CompoundModel NIGNormal GaussStats Double where
     pdf_marginal hypers stats@GaussStats{..} =
         (niglognorm hypers' / niglognorm hypers) / (root_2pi ^^ gauss_n)
         where
-          hypers' = update hypers stats
+          hypers' = update stats hypers
           -- This is calc_continuous_log_Z from numerics.cpp in crosscat
           -- TODO Copy the actual reference?
           niglognorm :: NIGNormal -> Log Double
@@ -175,10 +175,10 @@ instance ConjugateModel NIGNormal GaussStats Double where
 newtype Counts a = Counts (M.Map a Int)
 instance (Eq a, Ord a) => Statistic (Counts a) a where
     empty = Counts M.empty
-    insert (Counts m) x = Counts $ M.alter inc x m where
+    insert x (Counts m) = Counts $ M.alter inc x m where
                                 inc Nothing = Just 1
                                 inc (Just n) = Just (n+1)
-    remove (Counts m) x = Counts $ M.alter dec x m where
+    remove x (Counts m) = Counts $ M.alter dec x m where
                                 dec (Just 1) = Nothing
                                 dec (Just n) = Just (n-1)
 
@@ -195,9 +195,9 @@ instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a) a where
     pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
     pdf_predictive cs crp x = Exp $ log $ pdf_predictive_direct_crp cs crp x
     sample_predictive cs crp = weightedCategorical w where
-      w = [(pdf_predictive_direct_crp cs crp idx, idx) | idx <- enumerate_crp crp]
+      w = [(pdf_predictive_direct_crp cs crp idx, idx) | idx <- enumerate_crp cs crp]
 
-pdf_predictive_direct_crp :: (Ord a) => CRP a -> a -> Double
+pdf_predictive_direct_crp :: (Ord a) => Counts a -> CRP a -> a -> Double
 pdf_predictive_direct_crp cs@(Counts m) (CRP _ alpha) x = mine / total where
     mine = fromMaybe alpha $ fmap fromIntegral $ M.lookup x m
     total = alpha + (fromIntegral $ counts_total cs)
