@@ -217,7 +217,8 @@ repartition p (Column d hypers _) =
     Column d hypers $ recompute_suff_stats p d
 
 column_full_p :: Column -> Log Double
-column_full_p (Column _ hypers suff_stats) = undefined
+column_full_p (Column _ hypers suff_stats) = product marginals where
+    marginals = zipWith pdf_marginal (repeat hypers) $ M.elems suff_stats
 
 -- TODO Will eventually want to do hyperparameter inference on this
 view_alpha :: Log Double
