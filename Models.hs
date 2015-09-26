@@ -100,7 +100,7 @@ data GaussStats = GaussStats {
     }
 instance Statistic GaussStats Double where
     empty = GaussStats 0 0 0
-    insert GaussStats {..} x =
+    insert x GaussStats {..} =
         GaussStats { gauss_n = n',
                      gauss_mean = mean',
                      gauss_nvar = gauss_nvar + delta*(x-mean')
@@ -110,7 +110,7 @@ instance Statistic GaussStats Double where
             delta = x - gauss_mean
     -- TODO Unit test that insert and remove are inverses
     -- TODO Can remove be further simplified?
-    remove GaussStats {..} x =
+    remove x GaussStats {..} =
         GaussStats { gauss_n = n',
                      gauss_mean = mean',
                      gauss_nvar = gauss_nvar - delta*(x-gauss_mean)
@@ -135,17 +135,19 @@ data NIGNormal = NIGNormal {
       nign_s :: Double,
       nign_mu :: Double
     }
-instance ComponentModel NIGNormal GaussStats Double where
-    -- TODO Derive this in terms of the numerically more stable
-    -- quantities that GaussStats actually maintains.
-    update NIGNormal{..} stats = NIGNormal r' nu' s' mu'
-        where
-          r' = nign_r + fromIntegral (gauss_n stats)
-          nu' = nign_nu + fromIntegral (gauss_n stats)
-          mu' = (nign_r*nign_mu + gauss_sum stats) / r'
-          s' = nign_s + gauss_sum_sq stats +
-               nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
+instance Model NIGNormal Double where
+    pdf = undefined -- I'm too lazy, and this will get hidden by the
+                    -- default implementation of pdf_predictive
+                    -- anyway.
+
+    sample NIGNormal{..} = do
+      -- TODO Find a t distribution that admits real degrees of freedom.
+      std_t <- T.t $ floor nign_nu
+      return $ std_t * scale + nign_mu
+        where scale = sqrt(nign_s * (nign_r + 1) / (nign_nu / 2 * nign_r))
+
+instance CompoundModel NIGNormal GaussStats Double where
     pdf_marginal hypers stats@GaussStats{..} =
         (niglognorm hypers' / niglognorm hypers) / (root_2pi ^^ gauss_n)
         where
@@ -157,11 +159,18 @@ instance ComponentModel NIGNormal GaussStats Double where
               0.5*nu * (log 2 - log s) + 0.5 * log (2*pi) - 0.5 * log r
               + logGamma (nu/2)
 
-    sample_predictive NIGNormal{..} = do
-      -- TODO Find a t distribution that admits real degrees of freedom.
-      std_t <- T.t $ floor nign_nu
-      return $ std_t * scale + nign_mu
-        where scale = sqrt(nign_s * (nign_r + 1) / (nign_nu / 2 * nign_r))
+    sample_predictive = conjugate_sample_predictive
+
+instance ConjugateModel NIGNormal GaussStats Double where
+    -- TODO Derive this in terms of the numerically more stable
+    -- quantities that GaussStats actually maintains.
+    update stats NIGNormal{..} = NIGNormal r' nu' s' mu'
+        where
+          r' = nign_r + fromIntegral (gauss_n stats)
+          nu' = nign_nu + fromIntegral (gauss_n stats)
+          mu' = (nign_r*nign_mu + gauss_sum stats) / r'
+          s' = nign_s + gauss_sum_sq stats +
+               nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
 newtype Counts a = Counts (M.Map a Int)
 instance (Eq a, Ord a) => Statistic (Counts a) a where
