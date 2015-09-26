@@ -17,10 +17,16 @@ import Numeric.SpecFunctions (logGamma, logBeta)
 
 import Utils (choose)
 
-class Statistic stat element | stat -> element where
+type PDF elt = elt -> Log Double
+
+class Model m elt | m -> elt where
+    pdf :: m -> PDF elt
+    sample :: m -> RVar elt
+
+class Statistic stat elt | stat -> elt where
     empty :: stat
-    insert :: stat -> element -> stat
-    remove :: stat -> element -> stat
+    insert :: elt -> stat -> stat
+    remove :: elt -> stat -> stat
 
 data NoStat a = NoStat
 instance Statistic (NoStat a) a where
@@ -28,39 +34,64 @@ instance Statistic (NoStat a) a where
     insert _ _ = NoStat
     remove _ _ = NoStat
 
-class (Statistic suffstats element) => ComponentModel hypers suffstats element
-        | hypers -> suffstats element where
-    update :: hypers -> suffstats -> hypers
-    pdf_marginal :: hypers -> suffstats -> Log Double
-    pdf_predictive :: hypers -> element -> Log Double
-    sample_predictive :: hypers -> RVar element
+class (Statistic stat elt) => CompoundModel m stat elt
+        | m -> stat elt where
+    -- integral of p(t | theta) p(theta | alpha) dtheta
+    pdf_marginal :: m -> PDF stat
 
-    pdf_predictive hypers x = pdf' / pdf where
-        pdf  = pdf_marginal hypers empty
-        pdf' = pdf_marginal hypers single
-        single = insert empty x
+    -- integral of p(x | t, theta) p(theta | alpha) dtheta
+    pdf_predictive :: stat -> m -> PDF elt
+
+    -- theta ~ p(| alpha), x ~ p(| t, theta), yield x
+    sample_predictive :: stat -> m -> RVar elt
+
+    pdf_predictive stats m x = pdf' / pdf where
+        pdf  = pdf_marginal m stats
+        pdf' = pdf_marginal m (insert x stats)
+
+class (CompoundModel m stat elt) => ConjugateModel m stat elt
+  where
+    update :: stat -> m -> m
+    -- update empty = id
+    -- (update . a) . (update . b) = update . (a `union` b)
+
+    -- pdf_predictive s = pdf . update s
+    -- sample_predictive s = sample . update s
+
+conjugate_pdf_predictive :: (ConjugateModel m stat elt)
+    => stat -> m -> elt -> Log Double
+conjugate_pdf_predictive suffstats model =
+    pdf (update suffstats model)
+
+conjugate_sample_predictive :: (ConjugateModel m stat elt)
+    => stat -> m -> RVar element
+conjugate_sample_predictive suffstats model =
+    sample (update suffstats model)
+
 
 newtype TFCount = TFC (Int, Int)
 instance Statistic TFCount Bool where
     empty = TFC (0, 0)
-    insert (TFC (t, f)) True  = TFC (t + 1, f)
-    insert (TFC (t, f)) False = TFC (t, f + 1)
-    remove (TFC (t, f)) True  = TFC (t - 1, f)
-    remove (TFC (t, f)) False = TFC (t, f - 1)
+    insert True  (TFC (t, f)) = TFC (t + 1, f)
+    insert False (TFC (t, f)) = TFC (t, f + 1)
+    remove True  (TFC (t, f)) = TFC (t - 1, f)
+    remove False (TFC (t, f)) = TFC (t, f - 1)
 
 newtype BetaBernoulli = BBM (Double, Double)
-instance ComponentModel BetaBernoulli TFCount Bool where
-    update (BBM (alpha, beta)) (TFC (t, f)) =
-        (BBM (alpha + fromIntegral t, beta + fromIntegral f))
+instance Model BetaBernoulli Bool where
+    pdf (BBM (alpha, beta)) True  = Exp $ log $ alpha / (alpha + beta)
+    pdf (BBM (alpha, beta)) False = Exp $ log $  beta / (alpha + beta)
+    sample (BBM (alpha, beta)) = bernoulli (alpha/(alpha + beta))
+instance CompoundModel BetaBernoulli TFCount Bool where
     pdf_marginal h@(BBM (alpha, beta)) s@(TFC (t, f)) =
         choose (t + f) t
           * (Exp $ logBeta alpha' beta') / (Exp $ logBeta alpha beta)
               where  (BBM (alpha', beta')) = update h s
-    pdf_predictive (BBM (alpha, beta)) True =
-        Exp $ log $ alpha / (alpha + beta)
-    pdf_predictive (BBM (alpha, beta)) False =
-        Exp $ log $ beta / (alpha + beta)
-    sample_predictive (BBM (alpha, beta)) = bernoulli (alpha/(alpha + beta))
+    pdf_predictive = conjugate_pdf_predictive
+    sample_predictive = conjugate_sample_predictive
+instance ConjugateModel BetaBernoulli TFCount Bool where
+    update (TFC (t, f)) (BBM (alpha, beta)) =
+        (BBM (alpha + fromIntegral t, beta + fromIntegral f))
 
 data GaussStats = GaussStats {
       gauss_n :: Int,
