@@ -46,7 +46,10 @@ data Mixture prior p_stats comp c_stats element =
 instance ComponentModel (Mixture prior p_stats comp c_stats element)
     (NoStat element) element where
     update mix _ = mix
-    pdf_marginal = undefined -- Intractable, I think
+    pdf_marginal _ _ = Exp 0 -- Probability of the statistics, as written
+      -- Probability of the data is intractable, I think
+      -- There is also the aggregate probability of the component
+      -- stats, which has no name in this typeclass
     pdf_predictive mix x = undefined -- Involves cluster ids and weights, and a Log.sum
 
 -- Note: As written here, Crosscat will not end up being a very nice
