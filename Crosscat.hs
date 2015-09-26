@@ -29,8 +29,8 @@ type ColumnData a = V.Vector a
 -- the clusters in a column?
 -- - Decision: The latter seems to make more sense to me, so I'll do that.
 data Mixture prior p_stats comp c_stats element =
-    ( ComponentModel prior p_stats ClusterID
-    , ComponentModel comp c_stats element
+    ( CompoundModel prior p_stats ClusterID
+    , CompoundModel comp c_stats element
     ) => Mixture { prior :: prior
                  , p_stats :: p_stats
                  , c_hypers :: comp
@@ -43,14 +43,11 @@ data Mixture prior p_stats comp c_stats element =
 -- the assignment must be the data set that the p_stats are the
 -- statistics of).
 
-instance ComponentModel (Mixture prior p_stats comp c_stats element)
-    (NoStat element) element where
-    update mix _ = mix
-    pdf_marginal _ _ = Exp 0 -- Probability of the statistics, as written
-      -- Probability of the data is intractable, I think
-      -- There is also the aggregate probability of the component
-      -- stats, which has no name in this typeclass
-    pdf_predictive mix x = undefined -- Involves cluster ids and weights, and a Log.sum
+instance Model (Mixture prior p_stats comp c_stats element) element where
+    pdf mix x = undefined -- Involves cluster ids and weights, and a Log.sum
+
+    -- There is also the aggregate probability of the component
+    -- stats, which has no name in this typeclass
 
 -- Note: As written here, Crosscat will not end up being a very nice
 -- CRP mixture of CRP mixtures, because either
@@ -60,7 +57,7 @@ instance ComponentModel (Mixture prior p_stats comp c_stats element)
 --   need to share their assignments
 
 data Column = forall hypers stats element.
-    (ComponentModel hypers stats element)
+    (CompoundModel hypers stats element)
     => Column (ColumnData element) hypers (M.Map ClusterID stats)
 
 -- I may want to make the dataset a heterogeneous typed data frame along
