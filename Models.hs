@@ -190,21 +190,20 @@ merge (Counts m1) (Counts m2) = Counts $ M.unionWith (+) m1 m2
 
 -- CRP is different because it's collapsed without being conjugate.
 -- Hack it by including the counts in the "hypers"
-data CRP a = CRP a Double (Counts a)
-instance (Ord a, Enum a) => ComponentModel (CRP a) (Counts a) a where
-    update (CRP zero alpha cs1) cs2 = CRP zero alpha $ cs1 `merge` cs2
+data CRP a = CRP a Double
+instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a) a where
     pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
-    pdf_predictive crp x = Exp $ log $ pdf_predictive_direct_crp crp x
-    sample_predictive crp = weightedCategorical w where
-      w = [(pdf_predictive_direct_crp crp idx, idx) | idx <- enumerate_crp crp]
+    pdf_predictive cs crp x = Exp $ log $ pdf_predictive_direct_crp cs crp x
+    sample_predictive cs crp = weightedCategorical w where
+      w = [(pdf_predictive_direct_crp cs crp idx, idx) | idx <- enumerate_crp crp]
 
 pdf_predictive_direct_crp :: (Ord a) => CRP a -> a -> Double
-pdf_predictive_direct_crp (CRP _ alpha cs@(Counts m)) x = mine / total where
+pdf_predictive_direct_crp cs@(Counts m) (CRP _ alpha) x = mine / total where
     mine = fromMaybe alpha $ fmap fromIntegral $ M.lookup x m
     total = alpha + (fromIntegral $ counts_total cs)
 
-enumerate_crp :: (Enum a) => CRP a -> [a]
-enumerate_crp (CRP zero _ (Counts cs)) =
+enumerate_crp :: (Enum a) => (Counts a) -> CRP a -> [a]
+enumerate_crp (Counts cs) (CRP zero _) =
     if M.null cs then
         [zero]
     else
