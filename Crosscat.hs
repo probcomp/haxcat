@@ -197,7 +197,12 @@ cc_reinc col_id col view_id view Crosscat{..} =
 --   e.g. when the column is reassigned.
 
 recompute_suff_stats :: (Statistic stat elt) => Partition -> ColumnData elt -> (M.Map ClusterID stat)
-recompute_suff_stats = undefined
+recompute_suff_stats p d = M.foldlWithKey' stat_insert M.empty p where
+    -- stat_insert :: (M.Map ClusterID stat) -> (RowID, ClusterID) -> M.Map ClusterID stat
+    stat_insert m (RowID r_id) c_id = M.alter add_datum c_id m
+        where
+          -- add_datum :: Maybe stat -> Maybe stat
+          add_datum s = Just $ insert (d V.! r_id) $ fromMaybe empty s
 
 repartition :: Partition -> ColumnData Double -> Column -> Column
 repartition p d (Column hypers _) =
