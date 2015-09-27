@@ -7,7 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Crosscat where
+module Types where
 
 import qualified Data.Map as M
 import Data.Maybe (fromJust)

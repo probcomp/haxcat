@@ -11,7 +11,7 @@ import Numeric.Log
 
 import Utils
 import Models
-import Crosscat
+import Types
 
 ----------------------------------------------------------------------
 -- Column partition transitions                                     --
