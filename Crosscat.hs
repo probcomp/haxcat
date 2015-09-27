@@ -177,12 +177,12 @@ repartition :: Partition -> ColumnData Double -> Column -> Column
 repartition p d (Column hypers _) =
     Column hypers $ recompute_suff_stats p d
 
-column_full_p :: Column -> Log Double
-column_full_p (Column hypers suff_stats) = product marginals where
+column_full_pdf :: PDF Column
+column_full_pdf (Column hypers suff_stats) = product marginals where
     marginals = zipWith pdf_marginal (repeat hypers) $ M.elems suff_stats
 
 col_likelihood :: ColumnData Double -> Column -> View -> Log Double
-col_likelihood d col View{..} = column_full_p $ repartition view_partition d col
+col_likelihood d col View{..} = column_full_pdf $ repartition view_partition d col
 
 col_step :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
 col_step col_id d cc = do
@@ -191,7 +191,7 @@ col_step col_id d cc = do
     let view_for :: ViewID -> View
         view_for v_id = fromMaybe candidate_view $ M.lookup v_id cc_views
         likelihood :: (Double, ViewID) -> ((ViewID, Column), Log Double)
-        likelihood (w, v_id) = ((v_id, new_col), (column_full_p new_col) * log_domain w)
+        likelihood (w, v_id) = ((v_id, new_col), (column_full_pdf new_col) * log_domain w)
               where new_col = repartition (view_partition $ view_for v_id) d col
         prior_weights = crp_weights cc_counts cc_crp
         full_weights = map likelihood prior_weights
