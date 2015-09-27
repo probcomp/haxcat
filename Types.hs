@@ -220,9 +220,8 @@ cc_col_reinc col_id col view_id view Crosscat{..} =
     where
       cc_counts' = insert view_id cc_counts
       cc_partition' = M.insert col_id view_id cc_partition
-      cc_views' = M.alter xxx view_id cc_views
-      xxx Nothing = Just view
-      xxx (Just old_view) = Just $ view_col_reinc col_id col old_view
+      cc_views' = M.alter view_inc view_id cc_views
+      view_inc maybe_view = Just $ view_col_reinc col_id col $ fromMaybe view maybe_view
 
 ----------------------------------------------------------------------
 -- Initialization                                                   --
