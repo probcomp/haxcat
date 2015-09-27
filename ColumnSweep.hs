@@ -2,6 +2,7 @@
 
 module ColumnSweep where
 
+import Control.Monad (foldM)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Vector as V
@@ -86,3 +87,6 @@ col_step col_id d cc@Crosscat{cc_views = old_view_set} = do
     where col = col_for cc col_id
           new_crp = (CRP (ClusterID 0) per_view_alpha)
           row_ids = map RowID [0..V.length d]
+
+col_sweep :: [(ColID, ColumnData Double)] -> Crosscat -> RVar Crosscat
+col_sweep ds cc = foldM (flip $ uncurry col_step) cc ds
