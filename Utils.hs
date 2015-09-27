@@ -4,7 +4,7 @@ import Data.Random.RVar
 import Data.Random.Distribution.Categorical (weightedCategorical)
 
 import Numeric.Log hiding (sum)
-import Numeric.SpecFunctions (log1p, logBeta, logFactorial)
+import Numeric.SpecFunctions (log1p, logBeta, logGamma, logFactorial)
 
 flipweights :: [(a, Double)] -> RVar a
 flipweights weights = weightedCategorical [(exp (p - maxp), idx) | (idx, p) <- weights]
@@ -27,6 +27,22 @@ log_domain = Exp . log
 
 beta :: Double -> Double -> Log Double
 beta a b = Exp $ logBeta a b
+
+gamma :: Double -> Log Double
+gamma x = Exp $ logGamma x
+
+-- gamma_inc a x
+--
+--      Log-domain ratio of gamma plus increment to gamma.  This is
+--      equivalent to
+--
+--              gamma (a + x) / gamma a
+--
+--      but (will in the future be) computed more stably when x <<< a,
+--      by a Lanczos series expansion of log gamma.
+--
+gamma_inc :: Double -> Double -> Log Double
+gamma_inc a x = gamma (a + x) / gamma a
 
 -- bernoulli_weight alpha beta
 --
