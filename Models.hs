@@ -81,8 +81,8 @@ instance Statistic TFCount Bool where
 
 newtype BetaBernoulli = BBM (Double, Double)
 instance Model BetaBernoulli Bool where
-    pdf (BBM (alpha, beta)) True  = log_domain $ alpha / (alpha + beta)
-    pdf (BBM (alpha, beta)) False = log_domain $  beta / (alpha + beta)
+    pdf (BBM (alpha, beta)) True  = U.bernoulli_weight alpha beta
+    pdf (BBM (alpha, beta)) False = U.bernoulli_weight beta alpha
     sample (BBM (alpha, beta)) = bernoulli (alpha/(alpha + beta))
 instance CompoundModel BetaBernoulli TFCount Bool where
     pdf_marginal h@(BBM (alpha, beta)) s@(TFC (t, f)) =
