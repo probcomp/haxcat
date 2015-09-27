@@ -5,6 +5,7 @@
 
 module Models where
 
+import Control.Monad
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 
@@ -212,3 +213,10 @@ enumerate_crp (Counts cs) (CRP zero _) =
     else
         new : M.keys cs where
             new = succ $ fst $ M.findMax cs
+
+crp_sample_partition :: (Ord a, Ord b, Enum b) => (Counts b) -> CRP b -> [a] -> RVar (M.Map a b, Counts b)
+crp_sample_partition cs crp items = foldM sample1 (M.empty, cs) items where
+    -- sample1 :: (M.Map a b, Counts b) -> a -> RVar (M.Map a b, Counts b)
+    sample1 (m, cs) item = do
+      new <- sample_predictive cs crp
+      return (M.insert item new m, insert new cs)

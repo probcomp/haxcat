@@ -19,10 +19,10 @@ import Numeric.Log
 import Utils
 import Models
 
-newtype RowID = RowID Int
+newtype RowID = RowID Int deriving (Eq, Ord)
 newtype ColID = ColID Int deriving (Eq, Ord)
 newtype ViewID = ViewID Int deriving (Eq, Ord, Enum)
-newtype ClusterID = ClusterID Int
+newtype ClusterID = ClusterID Int deriving (Eq, Ord, Enum)
 
 -- Can probably get away with making this unboxed
 type ColumnData a = V.Vector a
@@ -106,6 +106,12 @@ view_nonempty :: View -> Maybe View
 view_nonempty v@View{view_columns = cs} | M.size cs == 0 = Nothing
                                         | otherwise = Just v
 
+-- The row ids and the entropy are for initializing a random partition
+view_empty :: CRP ClusterID -> [RowID] -> RVar View
+view_empty crp rows = do
+  (partition, counts) <- crp_sample_partition empty crp rows
+  return $ View crp counts M.empty partition
+
 -- Choice point: are cluster ids unique or shared across columns?
 -- - If unique, then partitions are column-specific, and I have to write
 --   code to enforce consistency within a view.
@@ -184,10 +190,13 @@ column_full_pdf (Column hypers suff_stats) = product marginals where
 col_likelihood :: ColumnData Double -> Column -> View -> Log Double
 col_likelihood d col View{..} = column_full_pdf $ repartition view_partition d col
 
+per_view_alpha :: Double -- TODO Will want to define a prior and do inference
+per_view_alpha = 1
+
 col_step :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
 col_step col_id d cc = do
     let cc'@Crosscat {..} = cc_uninc col_id cc
-    candidate_view <- (undefined :: RVar View)
+    candidate_view <- view_empty new_crp row_ids
     let view_for :: ViewID -> View
         view_for v_id = fromMaybe candidate_view $ M.lookup v_id cc_views
         likelihood :: (Double, ViewID) -> ((ViewID, Column), Log Double)
@@ -199,3 +208,5 @@ col_step col_id d cc = do
     return $ cc_reinc col_id col' new_v_id cc'
 
     where col = col_for cc col_id
+          new_crp = (CRP (ClusterID 0) per_view_alpha)
+          row_ids = map RowID [0..V.length d]
