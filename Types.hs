@@ -10,14 +10,16 @@
 
 module Types where
 
-import Control.Monad (liftM)
+import Control.Monad (foldM, liftM)
 import qualified Data.Map as M
 import Data.Maybe (fromJust, fromMaybe, catMaybes)
 import qualified Data.Set as S
+import Data.Tuple (swap)
 import qualified Data.Vector as V
 
 import Data.Random.RVar
 
+import Utils (flipweights)
 import Models
 
 newtype RowID = RowID Int deriving (Eq, Ord)
@@ -93,6 +95,18 @@ data Column = forall hypers stats.
     => Column hypers (M.Map ClusterID stats)
 
 type Partition = M.Map RowID ClusterID
+
+recompute_suff_stats :: (Statistic stat elt) => Partition -> ColumnData elt -> (M.Map ClusterID stat)
+recompute_suff_stats p d = M.foldlWithKey' stat_insert M.empty p where
+    -- stat_insert :: (M.Map ClusterID stat) -> (RowID, ClusterID) -> M.Map ClusterID stat
+    stat_insert m (RowID r_id) c_id = M.alter add_datum c_id m
+        where
+          -- add_datum :: Maybe stat -> Maybe stat
+          add_datum s = Just $ insert (d V.! r_id) $ fromMaybe empty s
+
+repartition :: Partition -> ColumnData Double -> Column -> Column
+repartition p d (Column hypers _) =
+    Column hypers $ recompute_suff_stats p d
 
 data View = View
     { view_crp :: CRP ClusterID
@@ -175,6 +189,9 @@ data Crosscat = Crosscat
     , cc_views :: M.Map ViewID View
     }
 
+cc_empty :: CRP ViewID -> Crosscat
+cc_empty crp = Crosscat crp empty M.empty M.empty
+
 col_for :: Crosscat -> ColID -> Column
 col_for Crosscat {..} c_id = fromJust $ M.lookup c_id (view_columns view)
     where view = fromJust $ M.lookup view_id cc_views
@@ -206,3 +223,41 @@ cc_col_reinc col_id col view_id view Crosscat{..} =
       cc_views' = M.alter xxx view_id cc_views
       xxx Nothing = Just view
       xxx (Just old_view) = Just $ view_col_reinc col_id col old_view
+
+----------------------------------------------------------------------
+-- Initialization                                                   --
+----------------------------------------------------------------------
+
+per_view_alpha :: Double -- TODO Will want to define a prior and do inference
+per_view_alpha = 1
+
+-- TODO Admit heterogeneous columns
+-- TODO Will want to define a prior and do inference
+per_column_hypers :: NIGNormal
+per_column_hypers = NIGNormal 0 1 1 1
+
+cc_insert_col_from_prior :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
+-- This is almost the same as col_step (after unincorporation), except
+-- it ignores the likelihoods of the existing views and assigns the
+-- column according to the prior.  Up to computational efficiency, the
+-- effect of inserting with the likelihoods can be recovered by
+-- postcomposing this with col_step.
+cc_insert_col_from_prior col_id d cc@Crosscat{..} = do
+  -- TODO Can we avoid sampling a candidate view if the column gets
+  -- added to an existing view?  Will laziness just do that?
+  let prior_weights = crp_weights cc_counts cc_crp
+  view_id <- flipweights $ map swap prior_weights
+  candidate_view <- view_empty new_crp row_ids
+  let view = fromMaybe candidate_view $ M.lookup view_id cc_views
+      new_col = repartition (view_partition view) d $ Column per_column_hypers undefined
+  return $ cc_col_reinc col_id new_col view_id view cc
+  where
+    new_crp = (CRP (ClusterID 0) per_view_alpha)
+    row_ids = map RowID [0..V.length d]
+
+cc_alpha :: Double -- TODO Will want to define a prior and do inference
+cc_alpha = 1
+
+cc_initialize :: M.Map ColID (ColumnData Double) -> RVar Crosscat
+cc_initialize ds = foldM (flip $ uncurry cc_insert_col_from_prior) cc $ M.toList ds where
+    cc = cc_empty $ CRP (ViewID 0) cc_alpha

@@ -46,27 +46,12 @@ import Types
 --   and (copies of?) the hyper parameters, which they resample
 --   e.g. when the column is reassigned.
 
-recompute_suff_stats :: (Statistic stat elt) => Partition -> ColumnData elt -> (M.Map ClusterID stat)
-recompute_suff_stats p d = M.foldlWithKey' stat_insert M.empty p where
-    -- stat_insert :: (M.Map ClusterID stat) -> (RowID, ClusterID) -> M.Map ClusterID stat
-    stat_insert m (RowID r_id) c_id = M.alter add_datum c_id m
-        where
-          -- add_datum :: Maybe stat -> Maybe stat
-          add_datum s = Just $ insert (d V.! r_id) $ fromMaybe empty s
-
-repartition :: Partition -> ColumnData Double -> Column -> Column
-repartition p d (Column hypers _) =
-    Column hypers $ recompute_suff_stats p d
-
 column_full_pdf :: PDF Column
 column_full_pdf (Column hypers suff_stats) = product marginals where
     marginals = zipWith pdf_marginal (repeat hypers) $ M.elems suff_stats
 
 col_likelihood :: ColumnData Double -> Column -> View -> Log Double
 col_likelihood d col View{..} = column_full_pdf $ repartition view_partition d col
-
-per_view_alpha :: Double -- TODO Will want to define a prior and do inference
-per_view_alpha = 1
 
 col_step :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
 col_step col_id d cc@Crosscat{cc_views = old_view_set} = do
