@@ -194,6 +194,35 @@ merge (Counts m1 t1) (Counts m2 t2) = Counts {
         counts_total = t1 + t2
     }
 
+data DirichletCategorical a = DC (Counts a Double)
+instance (Eq a, Ord a) => Model (DirichletCategorical a) a where
+    pdf (DC Counts{..}) x = U.bernoulli_weight c_x (counts_total - c_x)
+      where c_x = maybe 0 id $ lookup counts_map x
+    sample (DC Counts{..}) =
+        weightedCategorical [(x, a/counts_total) | (x, a) <- counts_map]
+
+instance (Eq a, Ord a)
+    => CompoundModel (DirichletCategorical a) (Counts a Double) a
+  where
+    pdf_marginal (DC (Counts alphas sum_alphas)) (Counts counts n) =
+        product [U.gamma_inc alpha (fromInteger c) | (alpha, c) <- alphacount]
+        / U.gamma_inc sum_alphas (fromInteger n)
+      where alphacount = elems $
+                M.mergeWithKey (\ _k a c -> Just (a, c))
+                    (map (\ a -> (a, 0)))
+                    (map (\ c -> (0, a)))
+                    alphas counts
+    pdf_predictive = conjugate_pdf_predictive
+    sample_predictive = conjugate_sample_predictive
+
+instance (Eq a, Ord a)
+    => ConjugateModel (DirichletCategorical a) (Counts a Double) a
+  where
+    update (Counts counts sum_counts) (DC alphas) =
+        DC $ merge (Counts counts' sum_counts') alphas
+      where counts' = map fromInteger counts
+            sum_counts' = fromInteger sum_counts
+
 -- CRP is different because it's collapsed without being conjugate.
 data CRP a = CRP a Double
 instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a Int) a where
