@@ -173,11 +173,11 @@ instance ConjugateModel NIGNormal GaussStats Double where
           s' = nign_s + gauss_sum_sq stats +
                nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
-data Counts a = {
-        counts_map :: M.Map a Int,
-        counts_total :: Int
+data Counts a c = {
+        counts_map :: M.Map a c,
+        counts_total :: c
     }
-instance (Eq a, Ord a) => Statistic (Counts a) a where
+instance (Eq a, Ord a, Num c) => Statistic (Counts a c) a where
     empty = Counts M.empty 0
     insert x Counts{..} = Counts {
             counts_map = M.alter (Just . (+ 1) . maybe 0 id) x counts_map,
@@ -188,7 +188,7 @@ instance (Eq a, Ord a) => Statistic (Counts a) a where
             counts_total = counts_total - 1
         }
 
-merge :: (Ord a) => Counts a -> Counts a -> Counts a
+merge :: (Ord a, Num c) => Counts a c -> Counts a c -> Counts a c
 merge (Counts m1 t1) (Counts m2 t2) = Counts {
         counts_map = M.unionWith (+) m1 m2,
         counts_total = t1 + t2
@@ -196,21 +196,21 @@ merge (Counts m1 t1) (Counts m2 t2) = Counts {
 
 -- CRP is different because it's collapsed without being conjugate.
 data CRP a = CRP a Double
-instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a) a where
+instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a Int) a where
     pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
     pdf_predictive cs crp x = log_domain $ pdf_predictive_direct_crp cs crp x
     sample_predictive cs crp = weightedCategorical $ crp_weights cs crp
 
-crp_weights :: (Ord a, Enum a) => (Counts a) -> (CRP a) -> [(Double, a)]
+crp_weights :: (Ord a, Enum a) => (Counts a Int) -> (CRP a) -> [(Double, a)]
 crp_weights cs crp =
     [(pdf_predictive_direct_crp cs crp x, x) | x <- enumerate_crp cs crp]
 
-pdf_predictive_direct_crp :: (Ord a) => Counts a -> CRP a -> a -> Double
+pdf_predictive_direct_crp :: (Ord a) => Counts a Int -> CRP a -> a -> Double
 pdf_predictive_direct_crp cs@(Counts m _) (CRP _ alpha) x = mine / total where
     mine = fromMaybe alpha $ fmap fromIntegral $ M.lookup x m
     total = alpha + (fromIntegral $ counts_total cs)
 
-enumerate_crp :: (Enum a) => (Counts a) -> CRP a -> [a]
+enumerate_crp :: (Enum a) => (Counts a Int) -> CRP a -> [a]
 enumerate_crp (Counts cs _) (CRP zero _) =
     if M.null cs then
         [zero]
@@ -218,9 +218,11 @@ enumerate_crp (Counts cs _) (CRP zero _) =
         new : M.keys cs where
             new = succ $ fst $ M.findMax cs
 
-crp_sample_partition :: (Ord a, Ord b, Enum b) => (Counts b) -> CRP b -> [a] -> RVar (M.Map a b, Counts b)
+crp_sample_partition :: (Ord a, Ord b, Enum b)
+    => (Counts b Int) -> CRP b -> [a] -> RVar (M.Map a b, Counts b Int)
 crp_sample_partition cs crp items = foldM sample1 (M.empty, cs) items where
-    -- sample1 :: (M.Map a b, Counts b) -> a -> RVar (M.Map a b, Counts b)
+    -- sample1 :: (M.Map a b, Counts b Int)
+    --     -> a -> RVar (M.Map a b, Counts b Int)
     sample1 (m, cs) item = do
       new <- sample_predictive cs crp
       return (M.insert item new m, insert new cs)
