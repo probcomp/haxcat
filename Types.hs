@@ -252,7 +252,7 @@ cc_insert_col_from_prior col_id d cc@Crosscat{..} = do
   return $ cc_col_reinc col_id new_col view_id view cc
   where
     new_crp = (CRP (ClusterID 0) per_view_alpha)
-    row_ids = map RowID [0..V.length d]
+    row_ids = map RowID [0..V.length d - 1]
 
 cc_alpha :: Double -- TODO Will want to define a prior and do inference
 cc_alpha = 1

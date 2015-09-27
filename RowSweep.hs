@@ -53,7 +53,7 @@ row_sweep1 ds cc = foldM (flip $ uncurry row_step) cc ds
 row_sweep2 :: M.Map ColID (ColumnData Double) -> Crosscat -> RVar Crosscat
 row_sweep2 ds cc | M.null ds = return cc
                  | otherwise = row_sweep1 reshaped cc where
-    reshaped = map lookup_fun $ map RowID [0..V.length d]
+    reshaped = map lookup_fun $ map RowID [0..V.length d - 1]
     keys = M.keysSet ds
     (_, d):_ = M.toList ds
     lookup_fun :: RowID -> (RowID, Row)
