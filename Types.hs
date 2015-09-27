@@ -10,7 +10,7 @@
 module Types where
 
 import qualified Data.Map as M
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Vector as V
 
 import Data.Random.RVar
@@ -108,6 +108,38 @@ view_col_uninc col_id v@View{view_columns = cs} = v{view_columns = cs'}
 view_col_reinc :: ColID -> Column -> View -> View
 view_col_reinc col_id col v@View{view_columns = cs} = v{view_columns = cs'}
     where cs' = M.insert col_id col cs
+
+-- Treats extra columns in the Row correctly, namely by ignoring them.
+-- TODO Tweak to ignore missing columns in the Row also (at fromJust)
+view_row_uninc :: RowID -> Row -> View -> View
+view_row_uninc r_id row View{..} =
+    View view_crp view_counts' view_columns' view_partition' where
+        cluster_id = fromJust $ M.lookup r_id view_partition
+        view_counts' = remove cluster_id view_counts
+        view_partition' = M.delete r_id view_partition
+        view_columns' = M.mapWithKey col_uninc view_columns
+        col_uninc :: ColID -> Column -> Column
+        col_uninc col_id (Column h m) = Column h (M.adjust (remove item) cluster_id m)
+            where item = fromJust $ M.lookup col_id row
+
+-- Treats extra columns in the Row correctly, namely by ignoring them.
+-- TODO Tweak to ignore missing columns in the Row also (at fromJust)
+-- TODO For possible uncollapsed columns, should probably accept a
+-- candidate new cluster.
+view_row_reinc :: RowID -> Row -> ClusterID -> View -> View
+view_row_reinc r_id row cluster_id View{..} =
+    case M.lookup r_id view_partition of
+      Nothing -> View view_crp view_counts' view_columns' view_partition'
+      (Just _) -> error "Reincorporating row id that was not unincorporated"
+    where
+      view_counts' = insert cluster_id view_counts
+      view_partition' = M.insert r_id cluster_id view_partition
+      view_columns' = M.mapWithKey col_reinc view_columns
+      col_reinc :: ColID -> Column -> Column
+      col_reinc col_id (Column h m) = Column h (M.alter add_datum cluster_id m)
+          where -- add_datum :: Maybe stats -> Maybe stats
+                add_datum stats = Just $ insert item $ fromMaybe empty stats
+                item = fromJust $ M.lookup col_id row
 
 view_nonempty :: View -> Maybe View
 view_nonempty v@View{view_columns = cs} | M.size cs == 0 = Nothing
