@@ -173,21 +173,32 @@ instance ConjugateModel NIGNormal GaussStats Double where
           s' = nign_s + gauss_sum_sq stats +
                nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
-newtype Counts a = Counts (M.Map a Int)
+data Counts a = {
+        counts_map :: M.Map a Int,
+        counts_total :: Int
+    }
 instance (Eq a, Ord a) => Statistic (Counts a) a where
-    empty = Counts M.empty
-    insert x (Counts m) = Counts $ M.alter inc x m where
-                                inc Nothing = Just 1
-                                inc (Just n) = Just (n+1)
-    remove x (Counts m) = Counts $ M.update dec x m where
-                                dec 1 = Nothing
-                                dec n = Just (n-1)
-
-counts_total :: Counts a -> Int -- TODO Store this in the counts object itself?
-counts_total (Counts m) = sum $ M.elems m
+    empty = Counts M.empty 0
+    insert x Counts{..} = Counts {
+            counts_map = M.alter inc x counts_map,
+            counts_total = counts_total + 1
+        }
+      where
+        inc Nothing = Just 1
+        inc (Just n) = Just (n + 1)
+    remove x Counts{..} = Counts {
+            counts_map = M.alter dec x counts_map,
+            counts_total = counts_total - 1
+        }
+      where
+        dec Nothing = Just 1
+        dec (Just n) = Just (n - 1)
 
 merge :: (Ord a) => Counts a -> Counts a -> Counts a
-merge (Counts m1) (Counts m2) = Counts $ M.unionWith (+) m1 m2
+merge (Counts m1 t1) (Counts m2 t2) = Counts {
+        counts_map = M.unionWith (+) m1 m2,
+        counts_total = t1 + t2
+    }
 
 -- CRP is different because it's collapsed without being conjugate.
 data CRP a = CRP a Double
@@ -201,12 +212,12 @@ crp_weights cs crp =
     [(pdf_predictive_direct_crp cs crp x, x) | x <- enumerate_crp cs crp]
 
 pdf_predictive_direct_crp :: (Ord a) => Counts a -> CRP a -> a -> Double
-pdf_predictive_direct_crp cs@(Counts m) (CRP _ alpha) x = mine / total where
+pdf_predictive_direct_crp cs@(Counts m _) (CRP _ alpha) x = mine / total where
     mine = fromMaybe alpha $ fmap fromIntegral $ M.lookup x m
     total = alpha + (fromIntegral $ counts_total cs)
 
 enumerate_crp :: (Enum a) => (Counts a) -> CRP a -> [a]
-enumerate_crp (Counts cs) (CRP zero _) =
+enumerate_crp (Counts cs _) (CRP zero _) =
     if M.null cs then
         [zero]
     else
