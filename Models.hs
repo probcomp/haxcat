@@ -178,9 +178,9 @@ instance (Eq a, Ord a) => Statistic (Counts a) a where
     insert x (Counts m) = Counts $ M.alter inc x m where
                                 inc Nothing = Just 1
                                 inc (Just n) = Just (n+1)
-    remove x (Counts m) = Counts $ M.alter dec x m where
-                                dec (Just 1) = Nothing
-                                dec (Just n) = Just (n-1)
+    remove x (Counts m) = Counts $ M.update dec x m where
+                                dec 1 = Nothing
+                                dec n = Just (n-1)
 
 counts_total :: Counts a -> Int -- TODO Store this in the counts object itself?
 counts_total (Counts m) = sum $ M.elems m
@@ -194,8 +194,11 @@ data CRP a = CRP a Double
 instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a) a where
     pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
     pdf_predictive cs crp x = Exp $ log $ pdf_predictive_direct_crp cs crp x
-    sample_predictive cs crp = weightedCategorical w where
-      w = [(pdf_predictive_direct_crp cs crp idx, idx) | idx <- enumerate_crp cs crp]
+    sample_predictive cs crp = weightedCategorical $ crp_weights cs crp
+
+crp_weights :: (Ord a, Enum a) => (Counts a) -> (CRP a) -> [(Double, a)]
+crp_weights cs crp =
+    [(pdf_predictive_direct_crp cs crp x, x) | x <- enumerate_crp cs crp]
 
 pdf_predictive_direct_crp :: (Ord a) => Counts a -> CRP a -> a -> Double
 pdf_predictive_direct_crp cs@(Counts m) (CRP _ alpha) x = mine / total where

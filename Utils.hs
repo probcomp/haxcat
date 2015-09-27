@@ -15,5 +15,12 @@ logsumexp xs = (log $ sum $ map exp adjusted) + max where
     adjusted = map (\x -> x - max) xs
     max = maximum xs
 
+flipweights_ld :: [(a, Log Double)] -> RVar a
+flipweights_ld weights = weightedCategorical [(ln $ exp (p / maxp), idx) | (idx, p) <- weights]
+    where maxp = maximum $ map snd weights
+
 choose :: Int -> Int -> Log Double
 choose n k = Exp $ logFactorial n - logFactorial k - logFactorial (n-k)
+
+log_domain :: (Floating a) => a -> Log a
+log_domain = Exp . log

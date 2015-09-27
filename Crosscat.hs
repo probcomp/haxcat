@@ -10,16 +10,18 @@
 module Crosscat where
 
 import qualified Data.Map as M
+import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Vector as V
 
 import Data.Random.RVar
 import Numeric.Log
 
+import Utils
 import Models
 
 newtype RowID = RowID Int
-newtype ColID = ColID Int
-newtype ViewID = ViewID Int deriving Enum
+newtype ColID = ColID Int deriving (Eq, Ord)
+newtype ViewID = ViewID Int deriving (Eq, Ord, Enum)
 newtype ClusterID = ClusterID Int
 
 -- Can probably get away with making this unboxed
@@ -56,10 +58,6 @@ instance Model (Mixture prior p_stats comp c_stats element) element where
 -- - or the inner mixtures would correspond to columns, and so would
 --   need to share their assignments
 
-data Column = forall hypers stats element.
-    (CompoundModel hypers stats element)
-    => Column (ColumnData element) hypers (M.Map ClusterID stats)
-
 -- I may want to make the dataset a heterogeneous typed data frame along
 -- the lines of https://github.com/acowley/Frames but I am not sure I
 -- grok the type-level magic.
@@ -67,9 +65,46 @@ data Column = forall hypers stats element.
 -- - And "Carter's Library", referenced from
 --   https://www.reddit.com/r/haskell/comments/2dd2um/what_are_some_haskell_alternatives_to_pandasnumpy/,
 --   which is allegedly online.
--- - Decision for now: hide the type with an existentials
+-- - Decision for now: just work on Doubles.
+
+
+-- Choice point: Should the component hypers be individual or shared
+-- per column?
+-- - currently not obvious from baxcat whether the hypers are per
+--   column or per cluster; code for doing inference on them is static
+--   and accepts a list of all clusters, but the clusters also store
+--   copies (which may have to be kept in sync?).
+-- - Decision: shared per column (but not across columns with the same
+--   type).
+
+data Column = forall hypers stats.
+    (CompoundModel hypers stats Double)
+    => Column hypers (M.Map ClusterID stats)
 
 type Partition = M.Map RowID ClusterID
+
+data View = View
+    { view_crp :: CRP ClusterID
+    , view_counts :: Counts ClusterID
+    , view_columns :: M.Map ColID Column
+    , view_partition :: Partition
+    }
+-- Invariant: The counts have to agree with the partition.
+-- Invariant: The stats held in each column have to agree with the
+--   partition and the (implicit) per-column data.
+-- This is a specialization/generalization of Mixture, above:
+-- - specialized to CRP (thus doesn't need the enumerate function)
+-- - generalized to a map from ColID to Column, which stores the
+--   hypers and the component stats; this has the effect of being able
+--   to add and remove columns (for which Mixture would need to change
+--   the element type)
+
+view_uninc :: ColID -> View -> View
+view_uninc = undefined
+
+view_nonempty :: View -> Maybe View
+view_nonempty v@View{view_columns = cs} | M.size cs == 0 = Nothing
+                                        | otherwise = Just v
 
 -- Choice point: are cluster ids unique or shared across columns?
 -- - If unique, then partitions are column-specific, and I have to write
@@ -78,20 +113,30 @@ type Partition = M.Map RowID ClusterID
 --   suff stats, I also need to know the column.
 -- Decision: shared.
 
-data Crosscat = Crosscat { xxx :: M.Map ColID ViewID
-                         , yyy :: M.Map ColID Column
-                         , zzz :: M.Map ViewID Partition
-                         }
+data Crosscat = Crosscat
+    { cc_crp :: CRP ViewID
+    , cc_counts :: Counts ViewID
+    , cc_partition :: M.Map ColID ViewID
+    , cc_views :: M.Map ViewID View
+    }
 
--- The hyperparameters we may eventualy be interested in include:
--- - alpha (and d?) for the crp on views
--- - alpha (and d?) for each of the per-view crps
--- - per-column, model-type-dependent hyperparameters (presumably
---   shared among that column's clusters)
---   - currently not obvious from baxcat whether the hypers are per
---     column or per cluster; code for doing inference on them is
---     static and accepts a list of all clusters, but the clusters
---     also store copies (which may have to be kept in sync?).
+col_for :: Crosscat -> ColID -> Column
+col_for Crosscat {..} c_id = fromJust $ M.lookup c_id (view_columns view)
+    where view = fromJust $ M.lookup view_id cc_views
+          view_id = fromJust $ M.lookup c_id cc_partition
+
+cc_uninc :: ColID -> Crosscat -> Crosscat
+cc_uninc col_id Crosscat {..} =
+    Crosscat cc_crp cc_counts' cc_partition' cc_views' where
+        view_id = fromJust $ M.lookup col_id cc_partition
+        cc_counts' = remove view_id cc_counts
+        cc_partition' = M.delete col_id cc_partition
+        cc_views' = M.update flush view_id cc_views
+        flush :: View -> Maybe View
+        flush = view_nonempty . view_uninc col_id
+
+cc_reinc :: ColID -> Column -> ViewID -> Crosscat -> Crosscat
+cc_reinc = undefined
 
 ----------------------------------------------------------------------
 -- Column partition transitions                                     --
@@ -125,35 +170,32 @@ data Crosscat = Crosscat { xxx :: M.Map ColID ViewID
 --   and (copies of?) the hyper parameters, which they resample
 --   e.g. when the column is reassigned.
 
--- TODO provided the model accepts the data
-recompute_suff_stats :: Partition -> ColumnData d -> (M.Map ClusterID model)
+recompute_suff_stats :: (Statistic stat elt) => Partition -> ColumnData elt -> (M.Map ClusterID stat)
 recompute_suff_stats = undefined
 
-repartition :: Partition -> Column -> Column
-repartition p (Column d hypers _) =
-    Column d hypers $ recompute_suff_stats p d
+repartition :: Partition -> ColumnData Double -> Column -> Column
+repartition p d (Column hypers _) =
+    Column hypers $ recompute_suff_stats p d
 
 column_full_p :: Column -> Log Double
-column_full_p (Column _ hypers suff_stats) = product marginals where
+column_full_p (Column hypers suff_stats) = product marginals where
     marginals = zipWith pdf_marginal (repeat hypers) $ M.elems suff_stats
 
--- TODO Will eventually want to do hyperparameter inference on this
-view_alpha :: Log Double
-view_alpha = Exp 0
+col_likelihood :: ColumnData Double -> Column -> View -> Log Double
+col_likelihood d col View{..} = column_full_p $ repartition view_partition d col
 
-col_weights :: Column -> Crosscat -> RVar [(ViewID, Log Double)]
-col_weights col Crosscat {..} = do
-    new_partition <- (undefined :: RVar Partition)
-    return $ (new_id, new_p new_partition):existing
-        where
-          new_id = succ $ fst (M.findMax zzz)
-          new_p :: Partition -> Log Double
-          new_p new_partition = (column_full_p $ repartition new_partition col)
-                                * view_alpha
-          existing = [(v_id, (column_full_p $ repartition partition col)
-                               * (Exp $ log (fromIntegral $ x v_id))) |
-                      (v_id, partition) <- M.toList zzz]
-          x :: ViewID -> Int
-          x = undefined -- How many columns does this view already
-                        -- contain?  (Not counting the one that's
-                        -- being moved now)
+col_step :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
+col_step col_id d cc = do
+    let cc'@Crosscat {..} = cc_uninc col_id cc
+    candidate_view <- (undefined :: RVar View)
+    let view_for :: ViewID -> View
+        view_for v_id = fromMaybe candidate_view $ M.lookup v_id cc_views
+        likelihood :: (Double, ViewID) -> ((ViewID, Column), Log Double)
+        likelihood (w, v_id) = ((v_id, new_col), (column_full_p new_col) * log_domain w)
+              where new_col = repartition (view_partition $ view_for v_id) d col
+        prior_weights = crp_weights cc_counts cc_crp
+        full_weights = map likelihood prior_weights
+    (new_v_id, col') <- flipweights_ld full_weights
+    return $ cc_reinc col_id col' new_v_id cc'
+
+    where col = col_for cc col_id
