@@ -41,7 +41,7 @@ data Mixture prior p_stats comp c_stats element =
                  , components :: M.Map ClusterID c_stats
                  , enumerate :: prior -> [ClusterID] -- TODO Put this in a class?
                  }
--- Invariant: the p_stats have to agree with the assignment (that is,
+-- INVARIANT: the p_stats have to agree with the assignment (that is,
 -- the assignment must be the data set that the p_stats are the
 -- statistics of).
 
@@ -89,8 +89,8 @@ data View = View
     , view_columns :: M.Map ColID Column
     , view_partition :: Partition
     }
--- Invariant: The counts have to agree with the partition.
--- Invariant: The stats held in each column have to agree with the
+-- INVARIANT: The counts have to agree with the partition.
+-- INVARIANT: The stats held in each column have to agree with the
 --   partition and the (implicit) per-column data.
 -- This is a specialization/generalization of Mixture, above:
 -- - specialized to CRP (thus doesn't need the enumerate function)
@@ -103,7 +103,7 @@ view_uninc :: ColID -> View -> View
 view_uninc col_id v@View{view_columns = cs} = v{view_columns = cs'}
     where cs' = M.delete col_id cs
 
--- Assume the column is already correctly partitioned
+-- ASSUME the column is already correctly partitioned
 view_reinc :: ColID -> Column -> View -> View
 view_reinc col_id col v@View{view_columns = cs} = v{view_columns = cs'}
     where cs' = M.insert col_id col cs
@@ -148,7 +148,7 @@ cc_uninc col_id Crosscat {..} =
         flush = view_nonempty . view_uninc col_id
 
 -- - Assume this ColID has already been unincorporated.
--- - Assume the column is already correctly partitioned according to
+-- - ASSUME the column is already correctly partitioned according to
 --   the view.
 -- - Pass a View object in case this Crosscat has no binding for the
 --   ViewID (i.e., if the column is becoming a singleton)
