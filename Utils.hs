@@ -4,7 +4,7 @@ import Data.Random.RVar
 import Data.Random.Distribution.Categorical (weightedCategorical)
 
 import Numeric.Log hiding (sum)
-import Numeric.SpecFunctions (logFactorial)
+import Numeric.SpecFunctions (logBeta, logFactorial)
 
 flipweights :: [(a, Double)] -> RVar a
 flipweights weights = weightedCategorical [(exp (p - maxp), idx) | (idx, p) <- weights]
@@ -24,3 +24,6 @@ choose n k = Exp $ logFactorial n - logFactorial k - logFactorial (n-k)
 
 log_domain :: (Floating a) => a -> Log a
 log_domain = Exp . log
+
+beta :: Double -> Double -> Log Double
+beta a b = Exp $ logBeta a b

@@ -14,9 +14,10 @@ import Data.Random.Distribution.Categorical (weightedCategorical)
 import qualified Data.Random.Distribution.T as T
 import Data.Random.RVar
 import Numeric.Log hiding (sum)
-import Numeric.SpecFunctions (logGamma, logBeta)
+import Numeric.SpecFunctions (logGamma)
 
-import Utils (choose)
+import Utils (choose, log_domain)
+import qualified Utils as U
 
 type PDF elt = elt -> Log Double
 
@@ -80,14 +81,13 @@ instance Statistic TFCount Bool where
 
 newtype BetaBernoulli = BBM (Double, Double)
 instance Model BetaBernoulli Bool where
-    pdf (BBM (alpha, beta)) True  = Exp $ log $ alpha / (alpha + beta)
-    pdf (BBM (alpha, beta)) False = Exp $ log $  beta / (alpha + beta)
+    pdf (BBM (alpha, beta)) True  = log_domain $ alpha / (alpha + beta)
+    pdf (BBM (alpha, beta)) False = log_domain $  beta / (alpha + beta)
     sample (BBM (alpha, beta)) = bernoulli (alpha/(alpha + beta))
 instance CompoundModel BetaBernoulli TFCount Bool where
     pdf_marginal h@(BBM (alpha, beta)) s@(TFC (t, f)) =
-        choose (t + f) t
-          * (Exp $ logBeta alpha' beta') / (Exp $ logBeta alpha beta)
-              where  (BBM (alpha', beta')) = update s h
+        choose (t + f) t * (U.beta alpha' beta') / (U.beta alpha beta)
+            where  (BBM (alpha', beta')) = update s h
     pdf_predictive = conjugate_pdf_predictive
     sample_predictive = conjugate_sample_predictive
 instance ConjugateModel BetaBernoulli TFCount Bool where
@@ -193,7 +193,7 @@ merge (Counts m1) (Counts m2) = Counts $ M.unionWith (+) m1 m2
 data CRP a = CRP a Double
 instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a) a where
     pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
-    pdf_predictive cs crp x = Exp $ log $ pdf_predictive_direct_crp cs crp x
+    pdf_predictive cs crp x = log_domain $ pdf_predictive_direct_crp cs crp x
     sample_predictive cs crp = weightedCategorical $ crp_weights cs crp
 
 crp_weights :: (Ord a, Enum a) => (Counts a) -> (CRP a) -> [(Double, a)]
