@@ -12,7 +12,7 @@ import Utils
 import Models
 import Types
 
-view_weights :: View -> M.Map ColID Double -> [(ClusterID, Log Double)]
+view_weights :: View -> Row -> [(ClusterID, Log Double)]
 view_weights View{..} row = map likelihood prior_weights where
     prior_weights = crp_weights view_counts view_crp
     likelihood :: (Double, ClusterID) -> (ClusterID, Log Double)

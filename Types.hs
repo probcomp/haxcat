@@ -25,6 +25,9 @@ newtype ClusterID = ClusterID Int deriving (Eq, Ord, Enum)
 -- Can probably get away with making this unboxed
 type ColumnData a = V.Vector a
 
+-- TODO What a poor representation of a row!
+type Row = M.Map ColID Double
+
 -- Choice point: Are cluster hypers per-cluster or shared across all
 -- the clusters in a column?
 -- - Decision: The latter seems to make more sense to me, so I'll do that.
