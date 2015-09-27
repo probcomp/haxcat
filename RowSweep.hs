@@ -4,7 +4,7 @@ module RowSweep where
 
 import Prelude hiding (mapM)
 
-import Control.Monad (foldM, liftM2)
+import Control.Monad (foldM, liftM, liftM2)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import Data.Traversable (mapM)
@@ -26,7 +26,7 @@ view_weights View{..} row = map likelihood prior_weights where
     likelihood (w, cluster_id) = (cluster_id, likelihood_one * log_domain w)
         where
           likelihood_one :: Log Double
-          likelihood_one = product $ M.elems $ mapZipWith (liftM2 col_pdf) row view_columns
+          likelihood_one = product $ M.elems $ mapZipWith (liftM2 col_pdf) (row_to_map row) view_columns
           col_pdf :: Double -> Column -> Log Double
           col_pdf x (Column hypers m) = pdf_predictive cluster hypers x
               where
@@ -50,7 +50,12 @@ row_step r_id row cc@Crosscat{cc_views = views} = do
 row_sweep1 :: [(RowID, Row)] -> Crosscat -> RVar Crosscat
 row_sweep1 ds cc = foldM (flip $ uncurry row_step) cc ds
 
-row_sweep2 :: [(ColID, ColumnData Double)] -> Crosscat -> RVar Crosscat
-row_sweep2 [] cc = return cc
-row_sweep2 list@((_, d):_) cc = row_sweep1 reshaped cc where
-    reshaped = map undefined $ map RowID [0..V.length d]
+row_sweep2 :: M.Map ColID (ColumnData Double) -> Crosscat -> RVar Crosscat
+row_sweep2 ds cc | M.null ds = return cc
+                 | otherwise = row_sweep1 reshaped cc where
+    reshaped = map lookup_fun $ map RowID [0..V.length d]
+    keys = M.keysSet ds
+    (_, d):_ = M.toList ds
+    lookup_fun :: RowID -> (RowID, Row)
+    lookup_fun r_id@(RowID idx) =
+        (r_id, Row keys (\col_id -> liftM (V.! idx) $ M.lookup col_id ds))

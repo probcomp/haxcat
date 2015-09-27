@@ -88,5 +88,5 @@ col_step col_id d cc@Crosscat{cc_views = old_view_set} = do
           new_crp = (CRP (ClusterID 0) per_view_alpha)
           row_ids = map RowID [0..V.length d]
 
-col_sweep :: [(ColID, ColumnData Double)] -> Crosscat -> RVar Crosscat
-col_sweep ds cc = foldM (flip $ uncurry col_step) cc ds
+col_sweep :: M.Map ColID (ColumnData Double) -> Crosscat -> RVar Crosscat
+col_sweep ds cc = foldM (flip $ uncurry col_step) cc $ M.toList ds

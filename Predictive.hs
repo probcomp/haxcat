@@ -23,13 +23,13 @@ column_sample :: ClusterID -> Column -> RVar Double
 column_sample c_id (Column hypers m) = sample_predictive stats hypers where
   stats = fromJust $ M.lookup c_id m
 
-view_sample :: View -> RVar Row
+view_sample :: View -> RVar (M.Map ColID Double)
 view_sample v@View{..} = do
   cluster_id <- view_cluster_sample v
   mapM (column_sample cluster_id) view_columns
 
 cc_sample :: Crosscat -> RVar Row
-cc_sample Crosscat{..} = liftM (M.foldl' M.union M.empty) per_view where
+cc_sample Crosscat{..} = liftM (map_to_row . M.foldl' M.union M.empty) per_view where
     per_view = mapM view_sample cc_views
 
 view_pdf_predictive :: View -> PDF Row

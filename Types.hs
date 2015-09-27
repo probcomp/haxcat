@@ -6,11 +6,14 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 
 module Types where
 
+import Control.Monad (liftM)
 import qualified Data.Map as M
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust, fromMaybe, catMaybes)
+import qualified Data.Set as S
 import qualified Data.Vector as V
 
 import Data.Random.RVar
@@ -25,8 +28,15 @@ newtype ClusterID = ClusterID Int deriving (Eq, Ord, Enum)
 -- Can probably get away with making this unboxed
 type ColumnData a = V.Vector a
 
--- TODO What a poor representation of a row!
-type Row = M.Map ColID Double
+data Row = Row (S.Set ColID) (ColID -> Maybe Double)
+
+row_to_map :: Row -> M.Map ColID Double
+row_to_map (Row cols cell) = M.fromAscList $ catMaybes $ map cellWithKey $ S.toAscList cols where
+    cellWithKey col_id = liftM (col_id,) $ cell col_id
+
+map_to_row :: M.Map ColID Double -> Row
+map_to_row m = Row (M.keysSet m) (flip M.lookup m)
+
 
 -- Choice point: Are cluster hypers per-cluster or shared across all
 -- the clusters in a column?
@@ -112,7 +122,7 @@ view_col_reinc col_id col v@View{view_columns = cs} = v{view_columns = cs'}
 -- Treats extra columns in the Row correctly, namely by ignoring them.
 -- TODO Tweak to ignore missing columns in the Row also (at fromJust)
 view_row_uninc :: RowID -> Row -> View -> View
-view_row_uninc r_id row View{..} =
+view_row_uninc r_id (Row _ cell) View{..} =
     View view_crp view_counts' view_columns' view_partition' where
         cluster_id = fromJust $ M.lookup r_id view_partition
         view_counts' = remove cluster_id view_counts
@@ -120,14 +130,14 @@ view_row_uninc r_id row View{..} =
         view_columns' = M.mapWithKey col_uninc view_columns
         col_uninc :: ColID -> Column -> Column
         col_uninc col_id (Column h m) = Column h (M.adjust (remove item) cluster_id m)
-            where item = fromJust $ M.lookup col_id row
+            where item = fromJust $ cell col_id
 
 -- Treats extra columns in the Row correctly, namely by ignoring them.
 -- TODO Tweak to ignore missing columns in the Row also (at fromJust)
 -- TODO For possible uncollapsed columns, should probably accept a
 -- candidate new cluster.
 view_row_reinc :: RowID -> Row -> ClusterID -> View -> View
-view_row_reinc r_id row cluster_id View{..} =
+view_row_reinc r_id (Row _ cell) cluster_id View{..} =
     case M.lookup r_id view_partition of
       Nothing -> View view_crp view_counts' view_columns' view_partition'
       (Just _) -> error "Reincorporating row id that was not unincorporated"
@@ -139,7 +149,7 @@ view_row_reinc r_id row cluster_id View{..} =
       col_reinc col_id (Column h m) = Column h (M.alter add_datum cluster_id m)
           where -- add_datum :: Maybe stats -> Maybe stats
                 add_datum stats = Just $ insert item $ fromMaybe empty stats
-                item = fromJust $ M.lookup col_id row
+                item = fromJust $ cell col_id
 
 view_nonempty :: View -> Maybe View
 view_nonempty v@View{view_columns = cs} | M.size cs == 0 = Nothing
