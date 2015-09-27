@@ -100,7 +100,13 @@ data View = View
 --   the element type)
 
 view_uninc :: ColID -> View -> View
-view_uninc = undefined
+view_uninc col_id v@View{view_columns = cs} = v{view_columns = cs'}
+    where cs' = M.delete col_id cs
+
+-- Assume the column is already correctly partitioned
+view_reinc :: ColID -> Column -> View -> View
+view_reinc col_id col v@View{view_columns = cs} = v{view_columns = cs'}
+    where cs' = M.insert col_id col cs
 
 view_nonempty :: View -> Maybe View
 view_nonempty v@View{view_columns = cs} | M.size cs == 0 = Nothing
@@ -141,8 +147,22 @@ cc_uninc col_id Crosscat {..} =
         flush :: View -> Maybe View
         flush = view_nonempty . view_uninc col_id
 
-cc_reinc :: ColID -> Column -> ViewID -> Crosscat -> Crosscat
-cc_reinc = undefined
+-- - Assume this ColID has already been unincorporated.
+-- - Assume the column is already correctly partitioned according to
+--   the view.
+-- - Pass a View object in case this Crosscat has no binding for the
+--   ViewID (i.e., if the column is becoming a singleton)
+cc_reinc :: ColID -> Column -> ViewID -> View -> Crosscat -> Crosscat
+cc_reinc col_id col view_id view Crosscat{..} =
+    case M.lookup col_id cc_partition of
+      Nothing  -> Crosscat cc_crp cc_counts' cc_partition' cc_views'
+      (Just _) -> error "Reincorporating id that was not unincorporated"
+    where
+      cc_counts' = insert view_id cc_counts
+      cc_partition' = M.insert col_id view_id cc_partition
+      cc_views' = M.alter xxx view_id cc_views
+      xxx Nothing = Just view
+      xxx (Just old_view) = Just $ view_reinc col_id col old_view
 
 ----------------------------------------------------------------------
 -- Column partition transitions                                     --
@@ -194,18 +214,20 @@ per_view_alpha :: Double -- TODO Will want to define a prior and do inference
 per_view_alpha = 1
 
 col_step :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
-col_step col_id d cc = do
+col_step col_id d cc@Crosscat{cc_views = old_view_set} = do
+    -- TODO This will propose singleton views even if the column is
+    -- already in a singleton view
     let cc'@Crosscat {..} = cc_uninc col_id cc
     candidate_view <- view_empty new_crp row_ids
     let view_for :: ViewID -> View
-        view_for v_id = fromMaybe candidate_view $ M.lookup v_id cc_views
+        view_for v_id = fromMaybe candidate_view $ M.lookup v_id old_view_set
         likelihood :: (Double, ViewID) -> ((ViewID, Column), Log Double)
         likelihood (w, v_id) = ((v_id, new_col), (column_full_pdf new_col) * log_domain w)
               where new_col = repartition (view_partition $ view_for v_id) d col
         prior_weights = crp_weights cc_counts cc_crp
         full_weights = map likelihood prior_weights
     (new_v_id, col') <- flipweights_ld full_weights
-    return $ cc_reinc col_id col' new_v_id cc'
+    return $ cc_reinc col_id col' new_v_id (view_for new_v_id) cc'
 
     where col = col_for cc col_id
           new_crp = (CRP (ClusterID 0) per_view_alpha)
