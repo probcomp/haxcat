@@ -180,19 +180,13 @@ data Counts a = {
 instance (Eq a, Ord a) => Statistic (Counts a) a where
     empty = Counts M.empty 0
     insert x Counts{..} = Counts {
-            counts_map = M.alter inc x counts_map,
+            counts_map = M.alter (Just . (+ 1) . maybe 0 id) x counts_map,
             counts_total = counts_total + 1
         }
-      where
-        inc Nothing = Just 1
-        inc (Just n) = Just (n + 1)
     remove x Counts{..} = Counts {
-            counts_map = M.alter dec x counts_map,
+            counts_map = M.alter (Just . (+ -1) . maybe 0 id) x counts_map,
             counts_total = counts_total - 1
         }
-      where
-        dec Nothing = Just 1
-        dec (Just n) = Just (n - 1)
 
 merge :: (Ord a) => Counts a -> Counts a -> Counts a
 merge (Counts m1 t1) (Counts m2 t2) = Counts {
