@@ -100,13 +100,13 @@ data View = View
 --   to add and remove columns (for which Mixture would need to change
 --   the element type)
 
-view_uninc :: ColID -> View -> View
-view_uninc col_id v@View{view_columns = cs} = v{view_columns = cs'}
+view_col_uninc :: ColID -> View -> View
+view_col_uninc col_id v@View{view_columns = cs} = v{view_columns = cs'}
     where cs' = M.delete col_id cs
 
 -- ASSUME the column is already correctly partitioned
-view_reinc :: ColID -> Column -> View -> View
-view_reinc col_id col v@View{view_columns = cs} = v{view_columns = cs'}
+view_col_reinc :: ColID -> Column -> View -> View
+view_col_reinc col_id col v@View{view_columns = cs} = v{view_columns = cs'}
     where cs' = M.insert col_id col cs
 
 view_nonempty :: View -> Maybe View
@@ -138,23 +138,23 @@ col_for Crosscat {..} c_id = fromJust $ M.lookup c_id (view_columns view)
     where view = fromJust $ M.lookup view_id cc_views
           view_id = fromJust $ M.lookup c_id cc_partition
 
-cc_uninc :: ColID -> Crosscat -> Crosscat
-cc_uninc col_id Crosscat {..} =
+cc_col_uninc :: ColID -> Crosscat -> Crosscat
+cc_col_uninc col_id Crosscat {..} =
     Crosscat cc_crp cc_counts' cc_partition' cc_views' where
         view_id = fromJust $ M.lookup col_id cc_partition
         cc_counts' = remove view_id cc_counts
         cc_partition' = M.delete col_id cc_partition
         cc_views' = M.update flush view_id cc_views
         flush :: View -> Maybe View
-        flush = view_nonempty . view_uninc col_id
+        flush = view_nonempty . view_col_uninc col_id
 
 -- - Assume this ColID has already been unincorporated.
 -- - ASSUME the column is already correctly partitioned according to
 --   the view.
 -- - Pass a View object in case this Crosscat has no binding for the
 --   ViewID (i.e., if the column is becoming a singleton)
-cc_reinc :: ColID -> Column -> ViewID -> View -> Crosscat -> Crosscat
-cc_reinc col_id col view_id view Crosscat{..} =
+cc_col_reinc :: ColID -> Column -> ViewID -> View -> Crosscat -> Crosscat
+cc_col_reinc col_id col view_id view Crosscat{..} =
     case M.lookup col_id cc_partition of
       Nothing  -> Crosscat cc_crp cc_counts' cc_partition' cc_views'
       (Just _) -> error "Reincorporating id that was not unincorporated"
@@ -163,4 +163,4 @@ cc_reinc col_id col view_id view Crosscat{..} =
       cc_partition' = M.insert col_id view_id cc_partition
       cc_views' = M.alter xxx view_id cc_views
       xxx Nothing = Just view
-      xxx (Just old_view) = Just $ view_reinc col_id col old_view
+      xxx (Just old_view) = Just $ view_col_reinc col_id col old_view

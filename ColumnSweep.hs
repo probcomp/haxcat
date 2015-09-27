@@ -71,7 +71,7 @@ col_step :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
 col_step col_id d cc@Crosscat{cc_views = old_view_set} = do
     -- TODO This will propose singleton views even if the column is
     -- already in a singleton view
-    let cc'@Crosscat {..} = cc_uninc col_id cc
+    let cc'@Crosscat {..} = cc_col_uninc col_id cc
     candidate_view <- view_empty new_crp row_ids
     let view_for :: ViewID -> View
         view_for v_id = fromMaybe candidate_view $ M.lookup v_id old_view_set
@@ -81,7 +81,7 @@ col_step col_id d cc@Crosscat{cc_views = old_view_set} = do
         prior_weights = crp_weights cc_counts cc_crp
         full_weights = map likelihood prior_weights
     (new_v_id, col') <- flipweights_ld full_weights
-    return $ cc_reinc col_id col' new_v_id (view_for new_v_id) cc'
+    return $ cc_col_reinc col_id col' new_v_id (view_for new_v_id) cc'
 
     where col = col_for cc col_id
           new_crp = (CRP (ClusterID 0) per_view_alpha)
