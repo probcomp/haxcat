@@ -190,7 +190,6 @@ merge :: (Ord a) => Counts a -> Counts a -> Counts a
 merge (Counts m1) (Counts m2) = Counts $ M.unionWith (+) m1 m2
 
 -- CRP is different because it's collapsed without being conjugate.
--- Hack it by including the counts in the "hypers"
 data CRP a = CRP a Double
 instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a) a where
     pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
