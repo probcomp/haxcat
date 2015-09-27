@@ -30,6 +30,8 @@ class Statistic stat elt | stat -> elt where
     insert :: elt -> stat -> stat
     remove :: elt -> stat -> stat
 
+    -- insert x . remove x = id
+
 data NoStat a = NoStat
 instance Statistic (NoStat a) a where
     empty = NoStat
@@ -38,13 +40,14 @@ instance Statistic (NoStat a) a where
 
 class (Statistic stat elt) => CompoundModel m stat elt
         | m -> stat elt where
-    -- integral of p(t | theta) p(theta | alpha) dtheta
+    -- p(t | alpha) = integral of p(t | theta) p(theta | alpha) dtheta
     pdf_marginal :: m -> PDF stat
 
-    -- integral of p(x | t, theta) p(theta | alpha) dtheta
+    -- p(x | t, alpha) = integral of p(x | t, theta) p(theta | alpha) dtheta
     pdf_predictive :: stat -> m -> PDF elt
 
-    -- theta ~ p(| alpha), x ~ p(| t, theta), yield x
+    -- x ~ p(| t, alpha), yield x
+    -- Equivalently:  theta ~ p(| alpha), x ~ p(| t, theta), yield x
     sample_predictive :: stat -> m -> RVar elt
 
     pdf_predictive stats m x = pdf' / pdf where
@@ -55,7 +58,8 @@ class (Model m elt, CompoundModel m stat elt) => ConjugateModel m stat elt
   where
     update :: stat -> m -> m
     -- update empty = id
-    -- (update . a) . (update . b) = update . (a `union` b)
+    -- (update . a) . (update . b) = update . (a . b)
+    --   for a, b :: stat -> stat
 
     -- pdf_predictive s = pdf . update s
     -- sample_predictive s = sample . update s
