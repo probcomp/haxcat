@@ -237,8 +237,12 @@ per_view_alpha = 1
 
 -- TODO Admit heterogeneous columns
 -- TODO Will want to define a prior and do inference
+-- TODO Setting kappa to 0 implies an infinite-variance prior on the
+-- location of the mean; which is great, except that the code is happy
+-- to occasionally sample fresh rows from a unique cluster (should it
+-- be?), which leads to Infinity data values.
 per_column_hypers :: NIGNormal
-per_column_hypers = NIGNormal 0 1 1 1
+per_column_hypers = NIGNormal 1 1 1 1
 
 cc_insert_col_from_prior :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
 -- This is almost the same as col_step (after unincorporation), except
