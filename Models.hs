@@ -130,6 +130,15 @@ gauss_sum_sq GaussStats{..} =
 root_2pi :: Log Double
 root_2pi = Exp $ 0.5 * log (2*pi)
 
+-- This is supposed to be equivalent to the NIX Normal
+-- parameterization from [1] with the substitution
+--   r = kappa
+--   s = nu * sigma^2
+-- which is also equivalent to NIG Normal parameterization with the
+-- substitution
+--   r = 1/V
+--   nu = 2 * a
+--   s = 2 * b
 data NIGNormal = NIGNormal {
       nign_r :: Double,
       nign_nu :: Double,
@@ -142,19 +151,21 @@ instance Model NIGNormal Double where
                     -- default implementation of pdf_predictive
                     -- anyway.
 
+    -- Equation 176 or 206 of [1]; he parameterizes his t distribution
+    -- with mean and variance as opposed to mean and scale here.
     sample NIGNormal{..} = do
       -- TODO Find a t distribution that admits real degrees of freedom.
       std_t <- T.t $ floor nign_nu
       return $ std_t * scale + nign_mu
-        where scale = sqrt(nign_s * (nign_r + 1) / (nign_nu / 2 * nign_r))
+        where scale = sqrt( (1.0/nign_r + 1) * (nign_s/nign_nu) )
 
 instance CompoundModel NIGNormal GaussStats Double where
+    -- Equation 170 of [1]
     pdf_marginal hypers stats@GaussStats{..} =
         (niglognorm hypers' / niglognorm hypers) / (root_2pi ^^ gauss_n)
         where
           hypers' = update stats hypers
           -- This is calc_continuous_log_Z from numerics.cpp in crosscat
-          -- TODO Copy the actual reference?
           niglognorm :: NIGNormal -> Log Double
           niglognorm NIGNormal{nign_r=r, nign_nu=nu, nign_s=s} = Exp $
               0.5*nu * (log 2 - log s) + 0.5 * log (2*pi) - 0.5 * log r
@@ -163,8 +174,11 @@ instance CompoundModel NIGNormal GaussStats Double where
     sample_predictive = conjugate_sample_predictive
 
 instance ConjugateModel NIGNormal GaussStats Double where
+    -- Equations 141-144 or 196-200 of [1]
     -- TODO Derive this in terms of the numerically more stable
     -- quantities that GaussStats actually maintains.
+    update GaussStats{gauss_n = 0} stats =
+        stats -- Special case b/c of division by r', which could be 0
     update stats NIGNormal{..} = NIGNormal r' nu' s' mu'
         where
           r' = nign_r + fromIntegral (gauss_n stats)
@@ -219,3 +233,9 @@ crp_sample_partition cs crp items = foldM sample1 (M.empty, cs) items where
     sample1 (m, cs) item = do
       new <- sample_predictive cs crp
       return (M.insert item new m, insert new cs)
+
+-- References
+
+-- [1] Kevin P. Murphy, "Conjugate Bayesian analysis of the Gaussian
+-- distribution", murphyk@cs.ubc.ca, last updated October 3, 2007
+-- http://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
