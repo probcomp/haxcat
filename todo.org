@@ -1,0 +1,121 @@
+Things to do (+ bullet means "done"):
++ Implement the class hierarchy refactoring that Taylor suggested
+- Write a 1-D pdf-sampler agreement test and apply it to
+  - various components with various stats
+  - a mixture with a fixed assignment
++ See whether Taylor's View proposal leads to a Crosscat type I believe
++ Fill in easy undefined bits for a full col_step
++ Fill in sampling a view from the view prior 
++ Draft a full column Gibbs sweep
++ Draft row transitions
++ Draft a full row Gibbs sweep
++ Benefit: compile full inference except for hyperparameters
++ Draft initialization against a dataset of the desired type
++ Benefit: Smoke test running the program
+  - To get stack traces
+    cabal configure --enable-executable-profiling
+    cabal build && dist/build/test-smoke/test-smoke +RTS -xc
+- "Crash" issues:
+  - when gauss_n is zero I get NaN stats :(
+  - why are there clusters with zero rows in them in the end state?
+  - could write the invariant checking code (maybe also require all
+    floats in existence to be finite)
+  - could write some diagnostic code, like # views, # clusters,
+    and maybe watch it evolve
++ Benefit: benchmark inference vs crosscat on ridiculous data
+  - train (bogodata 1167 23) 1500 takes about 10 minutes
+    - around 3x faster than crosscat
+  - train (bogodata2 1167 23) 15 takes about 1 minute
+    - around 3x slower than crosscat (but tons of clusters -- too many?)
+- Benefit: profile inference
+- Benefit: geweke test 1 x m
+  - Only tests the NIG Normal code
+  - geweke runner ought to have type
+    RVar a -> (a -> RVar b) -> (b -> a -> RVar a) -> (a -> b -> Probe) -> Results
+    except somebody needs to deal with unincorporating and
+    reincorporating any collapsed models in a that depend on the data b
+    - Can I make the transition operator do that?
+    - Can I get a version of Crosscat uninc that will conserve the
+      partitions while removing the data, for simulating new data
+      conditioned on the partition?
+    - This is sensible, because the cluster stats are the only things
+      in the thing that depend on the content rather than the shape of
+      the data.
+    - Possible kludge: define an "all-empty simulate" that only reads
+      the partitions and hyper parameters (and any uncollapsed cluster
+      parameters, when that starts happening)
+- Benefit: asymptotic consistency test
+- Import and possibly merge Taylor's draft commits
+  - Taylor's suggested numerical improvement over log (alpha/(alpha+beta))
+    - Likewise for categorical.
+  - Check chat for Taylor's other suggestions
+- Flush NoStat?
++ Draft predictive simulation
++ Draft predictive pdf
+- Draft multi-row joint simulation
+- Benefit: geweke test n x m
+- Is there a notion of asymptotic consistency with a joint multi-row
+  generator?
+  - Are such things ever in the hypothesis space?
+- Benefit: benchmark inference vs crosscat on synthetic data n x m
+- Draft collecting a data table
+- Benefit: benchmark inference vs crosscat on real data
+- Benefit: benchmark simulation vs crosscat on real data
+- Benefit: test quality on real data, once I figure out how to do that
++ Refactor: in Utils, say beta = Exp . logBeta, etc, and use those.
+- do the todos
++ Possible hack: if instead of a Map I represent a Row as a function
+  ColID -> Maybe Double, then I think I can get really good data shape behavior
+  - for the output of view_sample and cc_sample to not lose information, this
+    rep would need to be traversable
+  - the mapZipWith in view_weights traverses the Row, but could be arranged to
+    only query (and even win performance if queries were O(1))
+
+Cleanup:
+- Flush (or delimit?) DPMM; flush DPMM-specific Utils; reorient
+  Test.hs to test Crosscat
+- Alternative: Rewrite DPMM to use the pieces defined in Models;
+  re-test it
+- Get permission from Baxter to relicense as Apache or whatever the
+  crosscat license is?
+  - Add copyright headers
+
+For feature parity:
+- Hyperparameter inference
+- Conditional predictive simulation and assessment, for known and unknown rows
+  - Constrained sampling one row looks a lot like unconstrained, except the
+    constraints get passed in and affect the view_cluster_sample distribution
+  - Observed sampling is similar, except the view_cluster_sample is a
+    delta distribution at the known assignment.
+- Handling missing data (presumably by just omitting it from the suff stats)
+  instance (Statistic s a) => Statistic (Frob s) Maybe a where ...
+  - mumble: different meanings of Maybe: missing observations vs a
+    distribution that may choose to produce Nothing.
+  - if the homomorphism is a separate class, can extend it to Maybe by
+    mapping Nothing to the identity (will GHC flush the redundant
+    arithmetic?)
+- Handling heterogeneous data
+- Permit restriction to columns of interest in the predictive distribution
+  (as a work-saving device)
+- Do I want to mess with dynamic insertion and removal of rows?
+  - Multi-row (conditioned) sampling and assessment might benefit from
+    this
+- multinomial component model
+- von Mises component model
+- [with baxcat] flesh out component models
+- [with baxcat] support uncollapsed component models
+
+Future performance problems:
+- Cache the total in the crp counts object
+- Can I replace iterating over map keys and looking things up with
+  iterating over the maps?
+- Am I computing column_full_p too many times?
+- Will it be important to store the data table in a flat 2D form
+  rather than Map ColID (Vector Double)?
+- Is it possible that the Loom hack that vkm is so proud of was simply
+  to reshuffle the data store and reassign row and column ids after
+  every gibbs sweep to keep them contiguous?
+  - If so, could replace maps with flat arrays in the metadata too,
+    for the compute segments when they do not change
+  - Shuffling columns is likely to be difficult to reconcile with
+    making the representation strongly typed
