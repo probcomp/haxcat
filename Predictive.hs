@@ -6,7 +6,7 @@ import Prelude hiding (mapM)
 
 import Control.Monad hiding (mapM)
 import qualified Data.Map as M
-import Data.Maybe (fromJust)
+import Data.Maybe (fromMaybe)
 import Data.Random.RVar
 import Data.Traversable
 
@@ -21,7 +21,7 @@ view_cluster_sample View{..} = sample_predictive view_counts view_crp
 
 column_sample :: ClusterID -> Column -> RVar Double
 column_sample c_id (Column hypers m) = sample_predictive stats hypers where
-  stats = fromJust $ M.lookup c_id m
+  stats = fromMaybe empty $ M.lookup c_id m
 
 view_sample :: View -> RVar (M.Map ColID Double)
 view_sample v@View{..} = do
