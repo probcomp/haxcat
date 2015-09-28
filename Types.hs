@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 
 module Types where
@@ -22,10 +23,10 @@ import Data.Random.RVar
 import Utils (flipweights)
 import Models
 
-newtype RowID = RowID Int deriving (Eq, Ord)
-newtype ColID = ColID Int deriving (Eq, Ord)
-newtype ViewID = ViewID Int deriving (Eq, Ord, Enum)
-newtype ClusterID = ClusterID Int deriving (Eq, Ord, Enum)
+newtype RowID = RowID Int deriving (Eq, Ord, Show)
+newtype ColID = ColID Int deriving (Eq, Ord, Show)
+newtype ViewID = ViewID Int deriving (Eq, Ord, Enum, Show)
+newtype ClusterID = ClusterID Int deriving (Eq, Ord, Enum, Show)
 
 -- Can probably get away with making this unboxed
 type ColumnData a = V.Vector a
@@ -91,8 +92,10 @@ instance Model (Mixture prior p_stats comp c_stats element) element where
 --   type).
 
 data Column = forall hypers stats.
-    (CompoundModel hypers stats Double)
+    (Show hypers, Show stats, CompoundModel hypers stats Double)
     => Column hypers (M.Map ClusterID stats)
+
+deriving instance Show Column
 
 type Partition = M.Map RowID ClusterID
 
@@ -114,6 +117,7 @@ data View = View
     , view_columns :: M.Map ColID Column
     , view_partition :: Partition
     }
+    deriving Show
 -- INVARIANT: The counts have to agree with the partition.
 -- INVARIANT: The stats held in each column have to agree with the
 --   partition and the (implicit) per-column data.
@@ -188,6 +192,7 @@ data Crosscat = Crosscat
     , cc_partition :: M.Map ColID ViewID
     , cc_views :: M.Map ViewID View
     }
+    deriving Show
 
 cc_empty :: CRP ViewID -> Crosscat
 cc_empty crp = Crosscat crp empty M.empty M.empty

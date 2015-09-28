@@ -98,7 +98,7 @@ data GaussStats = GaussStats {
       gauss_n :: Int,
       gauss_mean :: Double,
       gauss_nvar :: Double
-    }
+    } deriving Show
 instance Statistic GaussStats Double where
     empty = GaussStats 0 0 0
     insert x GaussStats {..} =
@@ -135,7 +135,7 @@ data NIGNormal = NIGNormal {
       nign_nu :: Double,
       nign_s :: Double,
       nign_mu :: Double
-    }
+    } deriving Show
 
 instance Model NIGNormal Double where
     pdf = undefined -- I'm too lazy, and this will get hidden by the
@@ -173,7 +173,7 @@ instance ConjugateModel NIGNormal GaussStats Double where
           s' = nign_s + gauss_sum_sq stats +
                nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
-newtype Counts a = Counts (M.Map a Int)
+newtype Counts a = Counts (M.Map a Int) deriving Show
 instance (Eq a, Ord a) => Statistic (Counts a) a where
     empty = Counts M.empty
     insert x (Counts m) = Counts $ M.alter inc x m where
@@ -190,7 +190,7 @@ merge :: (Ord a) => Counts a -> Counts a -> Counts a
 merge (Counts m1) (Counts m2) = Counts $ M.unionWith (+) m1 m2
 
 -- CRP is different because it's collapsed without being conjugate.
-data CRP a = CRP a Double
+data CRP a = CRP a Double deriving Show
 instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a) a where
     pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
     pdf_predictive cs crp x = log_domain $ pdf_predictive_direct_crp cs crp x
