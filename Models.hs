@@ -197,9 +197,9 @@ merge (Counts m1 t1) (Counts m2 t2) = Counts {
 data DirichletCategorical a = DC (Counts a Double)
 instance (Eq a, Ord a) => Model (DirichletCategorical a) a where
     pdf (DC Counts{..}) x = U.bernoulli_weight c_x (counts_total - c_x)
-      where c_x = maybe 0 id $ lookup counts_map x
+      where c_x = maybe 0 id $ M.lookup x counts_map
     sample (DC Counts{..}) =
-        weightedCategorical [(x, a/counts_total) | (x, a) <- counts_map]
+        weightedCategorical [(a/counts_total, x) | (x, a) <- M.toList counts_map]
 
 instance (Eq a, Ord a)
     => CompoundModel (DirichletCategorical a) (Counts a Double) a
