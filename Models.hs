@@ -177,14 +177,14 @@ data Counts a c = Counts {
         counts_map :: M.Map a c,
         counts_total :: c
     }
-instance (Eq a, Ord a, Num c) => Statistic (Counts a c) a where
+instance (Eq a, Ord a, Eq c, Num c) => Statistic (Counts a c) a where
     empty = Counts M.empty 0
     insert x Counts{..} = Counts {
-            counts_map = M.alter (Just . (+ 1) . maybe 0 id) x counts_map,
+            counts_map = M.alter (U.nullify 0 . (+ 1) . maybe 0 id) x counts_map,
             counts_total = counts_total + 1
         }
     remove x Counts{..} = Counts {
-            counts_map = M.alter (Just . (+ (-1)) . maybe 0 id) x counts_map,
+            counts_map = M.alter (U.nullify 0 . (+ (-1)) . maybe 0 id) x counts_map,
             counts_total = counts_total - 1
         }
 

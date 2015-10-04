@@ -61,3 +61,7 @@ gamma_inc a x = gamma (a + x) / gamma a
 --
 bernoulli_weight :: Double -> Double -> Log Double
 bernoulli_weight alpha beta = Exp $ -log1p (beta/alpha)
+
+nullify :: (Eq a) => a -> a -> Maybe a
+nullify null thing | thing == null = Nothing
+                   | otherwise = Just thing
