@@ -5,8 +5,8 @@ import qualified Data.Map as M
 import Data.Random.RVar
 import Data.Random.Distribution.Categorical (weightedCategorical)
 
-import Numeric.Log hiding (sum)
-import Numeric.SpecFunctions (logBeta, logFactorial)
+import Numeric.Log hiding (log1p, sum)
+import Numeric.SpecFunctions (log1p, logBeta, logGamma, logFactorial)
 
 flipweights :: [(a, Double)] -> RVar a
 flipweights weights = weightedCategorical [(exp (p - maxp), idx) | (idx, p) <- weights]
@@ -43,3 +43,41 @@ mapZipWithHoles m1 m2 = M.fromAscList $ go (M.toAscList m1) (M.toAscList m2) whe
           LT -> (k1, (Just v1, Nothing)):go  r1 vs2
           GT -> (k2, (Nothing, Just v2)):go vs1  r2
           EQ -> (k1, (Just v1, Just v2)):go  r1  r2
+
+gamma :: Double -> Log Double
+gamma x = Exp $ logGamma x
+
+-- gamma_inc a x
+--
+--      Log-domain ratio of gamma plus increment to gamma.  This is
+--      equivalent to
+--
+--              gamma (a + x) / gamma a
+--
+--      but (will in the future be) computed more stably when x <<< a,
+--      by a Lanczos series expansion of log gamma.
+--
+gamma_inc :: Double -> Double -> Log Double
+gamma_inc a x = gamma (a + x) / gamma a
+
+-- bernoulli_weight alpha beta
+--
+--      Log-domain weight of a Bernoulli success given nonzero
+--      generalized counts of successes and failures, alpha and beta.
+--      This is equivalent to
+--
+--              Exp $ log (alpha/(alpha + beta))
+--
+--      but computed more stably when beta <<< alpha:
+--
+--              log (alpha/(alpha + beta))
+--                = -log ((alpha + beta)/alpha)
+--                = -log (1 + beta/alpha)
+--                = -log1p (beta/alpha)
+--
+bernoulli_weight :: Double -> Double -> Log Double
+bernoulli_weight alpha beta = Exp $ -log1p (beta/alpha)
+
+nullify :: (Eq a) => a -> a -> Maybe a
+nullify null thing | thing == null = Nothing
+                   | otherwise = Just thing

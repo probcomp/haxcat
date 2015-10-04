@@ -45,11 +45,9 @@ Things to do (+ bullet means "done"):
       the partitions and hyper parameters (and any uncollapsed cluster
       parameters, when that starts happening)
 - Benefit: asymptotic consistency test
-- Import and possibly merge Taylor's draft commits
-  - Taylor's suggested numerical improvement over log (alpha/(alpha+beta))
-    - Likewise for categorical.
-  - Check chat for Taylor's other suggestions
+- Check chat for Taylor's other suggestions
 - Flush NoStat?
+- Can I get rid of zipWithHoles via mergeWithKey?
 + Draft predictive simulation
 + Draft predictive pdf
 - Draft multi-row joint simulation

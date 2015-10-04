@@ -113,7 +113,7 @@ repartition p d (Column hypers _) =
 
 data View = View
     { view_crp :: CRP ClusterID
-    , view_counts :: Counts ClusterID
+    , view_counts :: Counts ClusterID Int
     , view_columns :: M.Map ColID Column
     , view_partition :: Partition
     }
@@ -188,7 +188,7 @@ view_empty crp rows = do
 
 data Crosscat = Crosscat
     { cc_crp :: CRP ViewID
-    , cc_counts :: Counts ViewID
+    , cc_counts :: Counts ViewID Int
     , cc_partition :: M.Map ColID ViewID
     , cc_views :: M.Map ViewID View
     }

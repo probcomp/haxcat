@@ -85,8 +85,8 @@ instance Statistic TFCount Bool where
 
 newtype BetaBernoulli = BBM (Double, Double)
 instance Model BetaBernoulli Bool where
-    pdf (BBM (alpha, beta)) True  = log_domain $ alpha / (alpha + beta)
-    pdf (BBM (alpha, beta)) False = log_domain $  beta / (alpha + beta)
+    pdf (BBM (alpha, beta)) True  = U.bernoulli_weight alpha beta
+    pdf (BBM (alpha, beta)) False = U.bernoulli_weight beta alpha
     sample (BBM (alpha, beta)) = bernoulli (alpha/(alpha + beta))
 instance CompoundModel BetaBernoulli TFCount Bool where
     pdf_marginal h@(BBM (alpha, beta)) s@(TFC (t, f)) =
@@ -191,49 +191,85 @@ instance ConjugateModel NIGNormal GaussStats Double where
           s' = nign_s + gauss_sum_sq stats +
                nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
-newtype Counts a = Counts (M.Map a Int) deriving Show
-instance (Eq a, Ord a) => Statistic (Counts a) a where
-    empty = Counts M.empty
-    insert x (Counts m) = Counts $ M.alter inc x m where
-                                inc Nothing = Just 1
-                                inc (Just n) = Just (n+1)
-    remove x (Counts m) = Counts $ M.update dec x m where
-                                dec 1 = Nothing
-                                dec n = Just (n-1)
+data Counts a c = Counts {
+        counts_map :: M.Map a c,
+        counts_total :: c
+    } deriving Show
+instance (Eq a, Ord a, Eq c, Num c) => Statistic (Counts a c) a where
+    empty = Counts M.empty 0
+    insert x Counts{..} = Counts {
+            counts_map = M.alter (U.nullify 0 . (+ 1) . maybe 0 id) x counts_map,
+            counts_total = counts_total + 1
+        }
+    remove x Counts{..} = Counts {
+            counts_map = M.alter (U.nullify 0 . (+ (-1)) . maybe 0 id) x counts_map,
+            counts_total = counts_total - 1
+        }
 
-counts_total :: Counts a -> Int -- TODO Store this in the counts object itself?
-counts_total (Counts m) = sum $ M.elems m
+merge :: (Ord a, Num c) => Counts a c -> Counts a c -> Counts a c
+merge (Counts m1 t1) (Counts m2 t2) = Counts {
+        counts_map = M.unionWith (+) m1 m2,
+        counts_total = t1 + t2
+    }
 
-merge :: (Ord a) => Counts a -> Counts a -> Counts a
-merge (Counts m1) (Counts m2) = Counts $ M.unionWith (+) m1 m2
+data DirichletCategorical a = DC (Counts a Double)
+instance (Eq a, Ord a) => Model (DirichletCategorical a) a where
+    pdf (DC Counts{..}) x = U.bernoulli_weight c_x (counts_total - c_x)
+      where c_x = maybe 0 id $ M.lookup x counts_map
+    sample (DC Counts{..}) =
+        weightedCategorical [(a/counts_total, x) | (x, a) <- M.toList counts_map]
+
+instance (Eq a, Ord a)
+    => CompoundModel (DirichletCategorical a) (Counts a Int) a
+  where
+    pdf_marginal (DC (Counts alphas sum_alphas)) (Counts counts n) =
+        product [U.gamma_inc alpha (fromIntegral c) | (alpha, c) <- alphacount]
+        / U.gamma_inc sum_alphas (fromIntegral n)
+      where alphacount = M.elems $
+                M.mergeWithKey (\ _k a c -> Just (a, c))
+                    (M.map (\ a -> (a, 0)))
+                    (M.map (\ c -> (0, c)))
+                    alphas counts
+    pdf_predictive = conjugate_pdf_predictive
+    sample_predictive = conjugate_sample_predictive
+
+instance (Eq a, Ord a)
+    => ConjugateModel (DirichletCategorical a) (Counts a Int) a
+  where
+    update (Counts counts sum_counts) (DC alphas) =
+        DC $ merge (Counts counts' sum_counts') alphas
+      where counts' = M.map fromIntegral counts
+            sum_counts' = fromIntegral sum_counts
 
 -- CRP is different because it's collapsed without being conjugate.
 data CRP a = CRP a Double deriving Show
-instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a) a where
+instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a Int) a where
     pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
     pdf_predictive cs crp x = log_domain $ pdf_predictive_direct_crp cs crp x
     sample_predictive cs crp = weightedCategorical $ crp_weights cs crp
 
-crp_weights :: (Ord a, Enum a) => (Counts a) -> (CRP a) -> [(Double, a)]
+crp_weights :: (Ord a, Enum a) => (Counts a Int) -> (CRP a) -> [(Double, a)]
 crp_weights cs crp =
     [(pdf_predictive_direct_crp cs crp x, x) | x <- enumerate_crp cs crp]
 
-pdf_predictive_direct_crp :: (Ord a) => Counts a -> CRP a -> a -> Double
-pdf_predictive_direct_crp cs@(Counts m) (CRP _ alpha) x = mine / total where
+pdf_predictive_direct_crp :: (Ord a) => Counts a Int -> CRP a -> a -> Double
+pdf_predictive_direct_crp cs@(Counts m _) (CRP _ alpha) x = mine / total where
     mine = fromMaybe alpha $ fmap fromIntegral $ M.lookup x m
     total = alpha + (fromIntegral $ counts_total cs)
 
-enumerate_crp :: (Enum a) => (Counts a) -> CRP a -> [a]
-enumerate_crp (Counts cs) (CRP zero _) =
+enumerate_crp :: (Enum a) => (Counts a Int) -> CRP a -> [a]
+enumerate_crp (Counts cs _) (CRP zero _) =
     if M.null cs then
         [zero]
     else
         new : M.keys cs where
             new = succ $ fst $ M.findMax cs
 
-crp_sample_partition :: (Ord a, Ord b, Enum b) => (Counts b) -> CRP b -> [a] -> RVar (M.Map a b, Counts b)
+crp_sample_partition :: (Ord a, Ord b, Enum b)
+    => (Counts b Int) -> CRP b -> [a] -> RVar (M.Map a b, Counts b Int)
 crp_sample_partition cs crp items = foldM sample1 (M.empty, cs) items where
-    -- sample1 :: (M.Map a b, Counts b) -> a -> RVar (M.Map a b, Counts b)
+    -- sample1 :: (M.Map a b, Counts b Int)
+    --     -> a -> RVar (M.Map a b, Counts b Int)
     sample1 (m, cs) item = do
       new <- sample_predictive cs crp
       return (M.insert item new m, insert new cs)
