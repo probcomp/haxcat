@@ -173,7 +173,7 @@ instance ConjugateModel NIGNormal GaussStats Double where
           s' = nign_s + gauss_sum_sq stats +
                nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
-data Counts a c = {
+data Counts a c = Counts {
         counts_map :: M.Map a c,
         counts_total :: c
     }
@@ -184,7 +184,7 @@ instance (Eq a, Ord a, Num c) => Statistic (Counts a c) a where
             counts_total = counts_total + 1
         }
     remove x Counts{..} = Counts {
-            counts_map = M.alter (Just . (+ -1) . maybe 0 id) x counts_map,
+            counts_map = M.alter (Just . (+ (-1)) . maybe 0 id) x counts_map,
             counts_total = counts_total - 1
         }
 
@@ -207,10 +207,10 @@ instance (Eq a, Ord a)
     pdf_marginal (DC (Counts alphas sum_alphas)) (Counts counts n) =
         product [U.gamma_inc alpha (fromInteger c) | (alpha, c) <- alphacount]
         / U.gamma_inc sum_alphas (fromInteger n)
-      where alphacount = elems $
+      where alphacount = M.elems $
                 M.mergeWithKey (\ _k a c -> Just (a, c))
                     (map (\ a -> (a, 0)))
-                    (map (\ c -> (0, a)))
+                    (map (\ c -> (0, c)))
                     alphas counts
     pdf_predictive = conjugate_pdf_predictive
     sample_predictive = conjugate_sample_predictive
