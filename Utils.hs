@@ -3,7 +3,7 @@ module Utils where
 import Data.Random.RVar
 import Data.Random.Distribution.Categorical (weightedCategorical)
 
-import Numeric.Log hiding (sum)
+import Numeric.Log hiding (log1p, sum)
 import Numeric.SpecFunctions (log1p, logBeta, logGamma, logFactorial)
 
 flipweights :: [(a, Double)] -> RVar a
