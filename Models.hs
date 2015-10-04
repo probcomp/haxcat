@@ -202,26 +202,26 @@ instance (Eq a, Ord a) => Model (DirichletCategorical a) a where
         weightedCategorical [(a/counts_total, x) | (x, a) <- M.toList counts_map]
 
 instance (Eq a, Ord a)
-    => CompoundModel (DirichletCategorical a) (Counts a Double) a
+    => CompoundModel (DirichletCategorical a) (Counts a Int) a
   where
     pdf_marginal (DC (Counts alphas sum_alphas)) (Counts counts n) =
-        product [U.gamma_inc alpha (fromInteger c) | (alpha, c) <- alphacount]
-        / U.gamma_inc sum_alphas (fromInteger n)
+        product [U.gamma_inc alpha (fromIntegral c) | (alpha, c) <- alphacount]
+        / U.gamma_inc sum_alphas (fromIntegral n)
       where alphacount = M.elems $
                 M.mergeWithKey (\ _k a c -> Just (a, c))
-                    (map (\ a -> (a, 0)))
-                    (map (\ c -> (0, c)))
+                    (M.map (\ a -> (a, 0)))
+                    (M.map (\ c -> (0, c)))
                     alphas counts
     pdf_predictive = conjugate_pdf_predictive
     sample_predictive = conjugate_sample_predictive
 
 instance (Eq a, Ord a)
-    => ConjugateModel (DirichletCategorical a) (Counts a Double) a
+    => ConjugateModel (DirichletCategorical a) (Counts a Int) a
   where
     update (Counts counts sum_counts) (DC alphas) =
         DC $ merge (Counts counts' sum_counts') alphas
-      where counts' = map fromInteger counts
-            sum_counts' = fromInteger sum_counts
+      where counts' = M.map fromIntegral counts
+            sum_counts' = fromIntegral sum_counts
 
 -- CRP is different because it's collapsed without being conjugate.
 data CRP a = CRP a Double
