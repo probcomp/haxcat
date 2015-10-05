@@ -38,6 +38,7 @@ Things to do (+ bullet means "done"):
   - Check chat for Taylor's other suggestions
   - Flush NoStat?
   - Can I get rid of zipWithHoles via mergeWithKey?
+  - Define more compact Show instances for newtypes of ints: Ro, Co, Cl, Vw
 - Benefit: profile inference
 - Benefit: geweke test 1 x m
   - Only tests the NIG Normal code
