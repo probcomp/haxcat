@@ -15,18 +15,29 @@ Things to do (+ bullet means "done"):
   - To get stack traces
     cabal configure --enable-executable-profiling
     cabal build && dist/build/test-smoke/test-smoke +RTS -xc
-- "Crash" issues:
-  - when gauss_n is zero I get NaN stats :(
-  - why are there clusters with zero rows in them in the end state?
-  - could write the invariant checking code (maybe also require all
-    floats in existence to be finite)
-  - could write some diagnostic code, like # views, # clusters,
-    and maybe watch it evolve
 + Benefit: benchmark inference vs crosscat on ridiculous data
   - train (bogodata 1167 23) 1500 takes about 10 minutes
     - around 3x faster than crosscat
   - train (bogodata2 1167 23) 15 takes about 1 minute
     - around 3x slower than crosscat (but tons of clusters -- too many?)
+  - crosscat suffers from multinomials in satellites, so perhaps this
+    comparison is a little unfair.
+- "Crash" testing:
+  - could write the invariant checking code (maybe also require all
+    floats in existence to be finite)
+  - could write some diagnostic code, like # views, # clusters,
+    and maybe watch it evolve
+  - could write a test suite that generates some data and runs
+    inference a while, checking that invariants are preserved.
+  - also exercise prediction (e.g., execution, finiteness, finiteness
+    of assessment)
+- "Crash" fixes:
+  - when gauss_n is zero I get NaN stats :(
+  - why are there clusters with zero rows in them in the end state?
+- Refactorings:
+  - Check chat for Taylor's other suggestions
+  - Flush NoStat?
+  - Can I get rid of zipWithHoles via mergeWithKey?
 - Benefit: profile inference
 - Benefit: geweke test 1 x m
   - Only tests the NIG Normal code
@@ -45,9 +56,6 @@ Things to do (+ bullet means "done"):
       the partitions and hyper parameters (and any uncollapsed cluster
       parameters, when that starts happening)
 - Benefit: asymptotic consistency test
-- Check chat for Taylor's other suggestions
-- Flush NoStat?
-- Can I get rid of zipWithHoles via mergeWithKey?
 + Draft predictive simulation
 + Draft predictive pdf
 - Draft multi-row joint simulation
@@ -104,7 +112,7 @@ For feature parity:
 - [with baxcat] support uncollapsed component models
 
 Future performance problems:
-- Cache the total in the crp counts object
++ Cache the total in the crp counts object
 - Can I replace iterating over map keys and looking things up with
   iterating over the maps?
 - Am I computing column_full_p too many times?
@@ -117,3 +125,4 @@ Future performance problems:
     for the compute segments when they do not change
   - Shuffling columns is likely to be difficult to reconcile with
     making the representation strongly typed
+    - An existential that holds a proxy describing the layout might work
