@@ -23,6 +23,9 @@ Things to do (+ bullet means "done"):
   - crosscat suffers from multinomials in satellites, so perhaps this
     comparison is a little unfair.
 - "Crash" testing:
+  - Fix the random seed in HaxcatTest and compare to known string
+  - Convert TestSmoke.hs into a cabalized benchmark executable (?)
+  - Add a little test that exercises prediction with known results
   - could write the invariant checking code (maybe also require all
     floats in existence to be finite)
   - could write some diagnostic code, like # views, # clusters,
@@ -88,12 +91,11 @@ Things to do (+ bullet means "done"):
     only query (and even win performance if queries were O(1))
 
 Cleanup:
-- Flush (or delimit?) DPMM; flush DPMM-specific Utils; reorient
-  Test.hs to test Crosscat
-- Alternative: Rewrite DPMM to use the pieces defined in Models;
-  re-test it
-- Get permission from Baxter to relicense as Apache or whatever the
-  crosscat license is?
+- Rewrite DPMM in terms of the abstractions defined in Models; re-test it
+  - Else flush (or delimit?) it; flush DPMM-specific Utils;
+- Generalize Test.hs to also test Haxcat
+- Rename the cabal file to haxcat.cabal
+- Get permission from Baxter to relicense as Apache
   - Add copyright headers
 
 For feature parity:
