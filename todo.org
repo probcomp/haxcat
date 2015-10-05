@@ -35,10 +35,19 @@ Things to do (+ bullet means "done"):
   - when gauss_n is zero I get NaN stats :(
   - why are there clusters with zero rows in them in the end state?
 - Refactorings:
-  - Check chat for Taylor's other suggestions
   - Flush NoStat?
   - Can I get rid of zipWithHoles via mergeWithKey?
   - Define more compact Show instances for newtypes of ints: Ro, Co, Cl, Vw
+  - Taylor says "CRP pdf_predictive should perhaps be rewritten in
+    terms of bernoulli_weight [or multinomial]".
+  - Taylor says "it occurred to me that bernoulli_weight ought to have
+    an explicit test for zero alpha, in which case it should
+    explicitly return -infinity, although I don't know how to express
+    that in Haskell."
+    - I think Haskell's arithmetic will just do the right thing
+  - Taylor says "For NIGNormal pdf, I think you can write this: pdf m
+    x = pdf_predictive empty m x.  In fact, that should just be called
+    compound_pdf"
 - Benefit: profile inference
 - Benefit: geweke test 1 x m
   - Only tests the NIG Normal code
