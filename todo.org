@@ -95,8 +95,8 @@ Cleanup:
   - Else flush (or delimit?) it; flush DPMM-specific Utils;
 - Generalize Test.hs to also test Haxcat
 - Rename the cabal file to haxcat.cabal
-- Get permission from Baxter to relicense as Apache
-  - Add copyright headers
++ Get permission from Baxter to relicense as Apache
+  + Add copyright headers
 
 For feature parity:
 - Hyperparameter inference

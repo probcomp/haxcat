@@ -5,7 +5,7 @@ name:                DPMM
 version:             0.0.0
 -- synopsis:
 -- description:
-license:             GPL-3
+license:             Apache-2.0
 license-file:        LICENSE
 author:              Baxter Eaves
 maintainer:          baxyjr@gmail.com
