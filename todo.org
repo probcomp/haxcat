@@ -69,6 +69,10 @@ Things to do (+ bullet means "done"):
       the partitions and hyper parameters (and any uncollapsed cluster
       parameters, when that starts happening)
 - Benefit: asymptotic consistency test
+  - Generically, can measure approximation of the predictive
+    distribution
+  - For in-class synthetic data can also measure convergence to the
+    latent structure
 + Draft predictive simulation
 + Draft predictive pdf
 - Draft multi-row joint simulation
@@ -138,3 +142,27 @@ Future performance problems:
   - Shuffling columns is likely to be difficult to reconcile with
     making the representation strongly typed
     - An existential that holds a proxy describing the layout might work
+
+Status of testing DPMM: I have a 4-parameter program that computes
+estimates of KL divergence.
+- The KL computation looks pretty plausible
+  - could be tried on more distributions, e.g. nested Gaussians
+- Anecdotal runs produce believable results; is there a way to
+  systematize?
+  - It seems like I want to automate exploration along at least some
+    dimensions, so I can do a run that actually validates asymptotic
+    certainty on my example.
+
+References (from Baxter):
+- Gaussians (including multivariate):
+  http://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
+  - He parameterizes his non-standard t-distributions by location and
+    squared scale.
+- Other things (don't trust his math for the von-Mises):
+  http://www.leg.ufpr.br/lib/exe/fetch.php/projetos:mci:tabelasprioris.pdf
+- Crosscat as implemented doesn't have multivariate component models,
+  just products of univariates.  The only thing they share is the
+  partition.
+  - Consequently don't need multi-dimensional normal-inverse-wishart
+- According to Baxter, the component model for categorical data is a
+  multinomial with a symmetric Dirichlet prior.
