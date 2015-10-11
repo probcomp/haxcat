@@ -23,7 +23,7 @@ Things to do (+ bullet means "done"):
   - crosscat suffers from multinomials in satellites, so perhaps this
     comparison is a little unfair.
 - "Crash" testing:
-  - Fix the random seed in HaxcatTest and compare to known string
+  + Fix the random seed in HaxcatTest and compare to known string
   - Convert TestSmoke.hs into a cabalized benchmark executable (?)
   - Add a little test that exercises prediction with known results
   - could write the invariant checking code (maybe also require all
@@ -40,7 +40,7 @@ Things to do (+ bullet means "done"):
 - Refactorings:
   - Flush NoStat?
   - Can I get rid of zipWithHoles via mergeWithKey?
-  - Define more compact Show instances for newtypes of ints: Ro, Co, Cl, Vw
+  + Define more compact Show instances for newtypes of ints: Ro, Co, Cl, Vw
   - Taylor says "CRP pdf_predictive should perhaps be rewritten in
     terms of bernoulli_weight [or multinomial]".
   - Taylor says "it occurred to me that bernoulli_weight ought to have

@@ -39,10 +39,23 @@ import Data.Random.RVar
 import Utils (flipweights)
 import Models
 
-newtype RowID = RowID Int deriving (Eq, Ord, Show)
-newtype ColID = ColID Int deriving (Eq, Ord, Show)
-newtype ViewID = ViewID Int deriving (Eq, Ord, Enum, Show)
-newtype ClusterID = ClusterID Int deriving (Eq, Ord, Enum, Show)
+newtype RowID = RowID Int deriving (Eq, Ord)
+newtype ColID = ColID Int deriving (Eq, Ord)
+newtype ViewID = ViewID Int deriving (Eq, Ord, Enum)
+newtype ClusterID = ClusterID Int deriving (Eq, Ord, Enum)
+
+instance Show RowID where
+    showsPrec 11 (RowID i) s = "(R " ++ show i ++ ")" ++ s
+    showsPrec _  (RowID i) s =  "R " ++ show i ++ s
+instance Show ColID where
+    showsPrec 11 (ColID i) s = "(Co " ++ show i ++ ")" ++ s
+    showsPrec _  (ColID i) s =  "Co " ++ show i ++ s
+instance Show ViewID where
+    showsPrec 11 (ViewID i) s = "(V " ++ show i ++ ")" ++ s
+    showsPrec _  (ViewID i) s =  "V " ++ show i ++ s
+instance Show ClusterID where
+    showsPrec 11 (ClusterID i) s = "(Cl " ++ show i ++ ")" ++ s
+    showsPrec _  (ClusterID i) s =  "Cl " ++ show i ++ s
 
 -- Can probably get away with making this unboxed
 type ColumnData a = V.Vector a
