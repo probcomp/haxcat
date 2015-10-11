@@ -228,6 +228,10 @@ merge (Counts m1 t1) (Counts m2 t2) = Counts {
         counts_total = t1 + t2
     }
 
+counts_to_asc_list :: (Ord a) => Counts a Int -> [a]
+counts_to_asc_list Counts {..} = concatMap group $ M.toAscList counts_map
+    where group (k, v) = take v $ repeat k
+
 data DirichletCategorical a = DC (Counts a Double)
 instance (Eq a, Ord a) => Model (DirichletCategorical a) a where
     pdf (DC Counts{..}) x = U.bernoulli_weight c_x (counts_total - c_x)
