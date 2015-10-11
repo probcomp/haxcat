@@ -32,7 +32,7 @@ Test-suite tests
   build-depends:       base >=4.6 && <4.9, random-fu, containers,
                        math-functions, mtl, rvar,
                        -- for crosscat
-                       log-domain, vector, HUnit
+                       log-domain, vector, HUnit, random
   default-language:    Haskell2010
   Ghc-options:         -Wall -fno-warn-name-shadowing -O2
 
