@@ -27,7 +27,34 @@ Things to do (+ bullet means "done"):
   - Convert TestSmoke.hs into a cabalized benchmark executable (?)
   - Add a little test that exercises prediction with known results
   - could write the invariant checking code (maybe also require all
-    floats in existence to be finite)
+    floats in existence to be finite).
+    - The non-cache information in a Crosscat is
+      - The top crp alpha
+      - The cc_partition
+      - For each view
+        - The view crp alpha
+        - The view partition
+      - For each column
+        - The column hypers
+    - The major invariant: Rebuilding from the data with the given
+      view partition and cluster partitions produces the same result
+      up to floating point in the suff stats.  This implies:
+      - All floats are finite
+      - Column stats agree with the dataset and the partition up to
+        floating point
+      - View counts agree with the partition (and count total agrees)
+        - No zero values in view counts
+      - cc counts agree with the partition (and count total agrees)
+        - No zero values in cc counts
+      - The set of cluster ids in a column is the set of cluster ids
+        in the partition
+      - Ditto keys of cc_views vs values of cc_partition
+      - A ColID is assigned to a view iff it assigns that ColID to a
+        Column: set of a value's keys in cc_partition equals set of
+        keys in that view's columns map
+      - The views are rectangular in the RowIDs
+    - Major dynamic invariant: None of the transformations lose (or
+      synthesize) row or column ids
   - could write some diagnostic code, like # views, # clusters,
     and maybe watch it evolve
   - could write a test suite that generates some data and runs
@@ -51,6 +78,10 @@ Things to do (+ bullet means "done"):
   - Taylor says "For NIGNormal pdf, I think you can write this: pdf m
     x = pdf_predictive empty m x.  In fact, that should just be called
     compound_pdf"
+  - Could migrate the Map ColID Column out to the Crosscat object.
+    Then each View is more clearly just the set of applications of a
+    crp (mapping rows to clusters); and I may be able to reuse that
+    object in the relevant part of crosscat too.
 - Benefit: profile inference
 - Benefit: geweke test 1 x m
   - Only tests the NIG Normal code
