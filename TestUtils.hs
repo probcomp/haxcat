@@ -67,7 +67,10 @@ instance (Eq c, Num c, Show c) => StructureCheckable (Counts a c) where
               non_zero e = test $ assertBool "Zero count found" $ not $ e == 0
 
 instance StructureCheckable View where
-    structure_test View {..} = test $ counts_ok : counts : right_clusters
+    structure_test View {..} =
+        test [ ("counts" ~: [counts_ok, counts])
+             , ("clusters agree with partition" ~: right_clusters)
+             ]
         where counts_ok = structure_test view_counts
               counts = counts_agree_with_partition view_counts view_partition
               right_clusters = map has_right_clusters $ M.elems view_columns
@@ -81,18 +84,23 @@ counts_agree_with_partition cs part =
 
 instance StructureCheckable Crosscat where
     structure_test Crosscat {..} =
-        test $ counts_ok : counts_agree : views_ok ++ [views]
-                 ++ same_rows ++ right_columns
-        where counts_ok = structure_test cc_counts
-              counts_agree = counts_agree_with_partition cc_counts cc_partition
-              views_ok = map structure_test $ M.elems cc_views
-              views = M.keys cc_views ~?= (uniq $ sort $ M.elems cc_partition)
-              same_rows = map sameRows $ map view_partition $ M.elems cc_views
-              right_columns = map rightColumns $ groupBy ((==) `on` snd)
-                              $ sortOn snd $ M.toAscList cc_partition
-              one_partition = view_partition $ head $ M.elems cc_views
-              sameRows m = M.keys m ~?= M.keys one_partition
-              rightColumns :: [(ColID, ViewID)] -> Test
-              rightColumns cols =
-                  map fst cols ~=? (M.keys $ view_columns $ fromJust
-                                   $ M.lookup (snd $ head cols) cc_views)
+        test [ ("counts" ~: [counts_ok, counts_agree])
+             , ("views" ~: views_ok)
+             , ("all views present" ~: views_there)
+             , ("views rectangular" ~: same_rows)
+             , ("views have their columns" ~: test right_columns)
+             ]
+        where
+          counts_ok = structure_test cc_counts
+          counts_agree = counts_agree_with_partition cc_counts cc_partition
+          views_ok = map structure_test $ M.elems cc_views
+          views_there = M.keys cc_views ~?= (uniq $ sort $ M.elems cc_partition)
+          same_rows = map sameRows $ map view_partition $ M.elems cc_views
+          right_columns = map rightColumns $ groupBy ((==) `on` snd)
+                          $ sortOn snd $ M.toAscList cc_partition
+          one_partition = view_partition $ head $ M.elems cc_views
+          sameRows m = M.keys m ~?= M.keys one_partition
+          rightColumns :: [(ColID, ViewID)] -> Test
+          rightColumns cols =
+              map fst cols ~=? (M.keys $ view_columns $ fromJust
+                               $ M.lookup (snd $ head cols) cc_views)
