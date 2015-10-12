@@ -24,7 +24,7 @@ import Data.List (group, groupBy, sort, sortBy)
 import qualified Data.Map as M
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
-import qualified Data.Vector
+import qualified Data.Vector as V
 import Data.Random
 
 import Test.HUnit hiding (Counts)
@@ -43,7 +43,8 @@ uniq = map head . group
 
 bogodata :: Int -> Int -> M.Map ColID (ColumnData Double)
 bogodata rows cols = M.fromList $ map column [0..cols-1] where
-    column col = (ColID col, Data.Vector.fromList $ map fromIntegral $ map (\x -> x + rows * col) [0..rows-1])
+    column col = (ColID col, V.fromList $ map fromIntegral
+                 $ map (\x -> x + rows * col) [0..rows-1])
 
 bogodata2 :: Int -> Int -> RVar (M.Map ColID (ColumnData Double))
 bogodata2 rows cols = do
@@ -52,9 +53,9 @@ bogodata2 rows cols = do
   return $ reshape new_rows
       where
         reshape :: [Row] -> (M.Map ColID (ColumnData Double))
-        reshape rows = M.fromList $ map pick $ map ColID [0..cols-1]
-            where
-              pick col_id = (col_id, Data.Vector.fromList $ map (\(Row _ cell) -> fromJust $ cell col_id) rows)
+        reshape rows = M.fromList $ map (pick rows) $ map ColID [0..cols-1]
+        pick rows col_id = (col_id, V.fromList $ map (lookup col_id) rows)
+        lookup col_id (Row _ cell) = fromJust $ cell col_id
 
 class StructureCheckable a where
     structure_test :: a -> Test
@@ -66,9 +67,9 @@ instance (Eq c, Num c, Show c) => StructureCheckable (Counts a c) where
               non_zero e = test $ assertBool "Zero count found" $ not $ e == 0
 
 instance StructureCheckable View where
-    structure_test View {..} = test $ counts_ok : counts_agree : right_clusters
+    structure_test View {..} = test $ counts_ok : counts : right_clusters
         where counts_ok = structure_test view_counts
-              counts_agree = counts_agree_with_partition view_counts view_partition
+              counts = counts_agree_with_partition view_counts view_partition
               right_clusters = map has_right_clusters $ M.elems view_columns
               has_right_clusters (Column _ suffs) =
                   M.keys suffs ~?= (uniq $ sort $ M.elems view_partition)
@@ -79,13 +80,19 @@ counts_agree_with_partition cs part =
     counts_to_asc_list cs ~?= (sort $ M.elems part)
 
 instance StructureCheckable Crosscat where
-    structure_test Crosscat {..} = test $ counts_ok : counts_agree : views_ok ++ [views_agree] ++ all_same_rows ++ all_right_columns
+    structure_test Crosscat {..} =
+        test $ counts_ok : counts_agree : views_ok ++ [views]
+                 ++ same_rows ++ right_columns
         where counts_ok = structure_test cc_counts
               counts_agree = counts_agree_with_partition cc_counts cc_partition
               views_ok = map structure_test $ M.elems cc_views
-              views_agree = M.keys cc_views ~?= (uniq $ sort $ M.elems cc_partition)
-              all_same_rows = map sameRows $ map view_partition $ M.elems cc_views
-              all_right_columns = map rightColumns $ groupBy ((==) `on` snd) $ sortOn snd $ M.toAscList cc_partition
-              sameRows m = M.keys m ~?= (M.keys $ view_partition $ head $ M.elems cc_views)
+              views = M.keys cc_views ~?= (uniq $ sort $ M.elems cc_partition)
+              same_rows = map sameRows $ map view_partition $ M.elems cc_views
+              right_columns = map rightColumns $ groupBy ((==) `on` snd)
+                              $ sortOn snd $ M.toAscList cc_partition
+              one_partition = view_partition $ head $ M.elems cc_views
+              sameRows m = M.keys m ~?= M.keys one_partition
               rightColumns :: [(ColID, ViewID)] -> Test
-              rightColumns cols = map fst cols ~=? (M.keys $ view_columns $ fromJust $ M.lookup (snd $ head cols) cc_views)
+              rightColumns cols =
+                  map fst cols ~=? (M.keys $ view_columns $ fromJust
+                                   $ M.lookup (snd $ head cols) cc_views)
