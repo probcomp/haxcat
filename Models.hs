@@ -43,16 +43,19 @@ class Model m elt | m -> elt where
 
 class Statistic stat elt | stat -> elt where
     empty :: stat
+    -- insert x . remove x = id
     insert :: elt -> stat -> stat
     remove :: elt -> stat -> stat
-
-    -- insert x . remove x = id
+    -- null empty = True
+    -- but other stats might also be null
+    null :: stat -> Bool
 
 data NoStat a = NoStat
 instance Statistic (NoStat a) a where
     empty = NoStat
     insert _ _ = NoStat
     remove _ _ = NoStat
+    null _ = True
 
 class (Statistic stat elt) => CompoundModel m stat elt
         | m -> stat elt where
@@ -98,6 +101,8 @@ instance Statistic TFCount Bool where
     insert False (TFC (t, f)) = TFC (t, f + 1)
     remove True  (TFC (t, f)) = TFC (t - 1, f)
     remove False (TFC (t, f)) = TFC (t, f - 1)
+    null (TFC (0, 0)) = True
+    null _ = False
 
 newtype BetaBernoulli = BBM (Double, Double)
 instance Model BetaBernoulli Bool where
@@ -139,6 +144,8 @@ instance Statistic GaussStats Double where
             n' = gauss_n - 1
             mean' = (fromIntegral gauss_n * gauss_mean - x) / fromIntegral n'
             delta = x - mean'
+    null GaussStats { gauss_n = 0 } = True
+    null _ = False
 
 gauss_sum :: GaussStats -> Double
 gauss_sum GaussStats{..} = fromIntegral gauss_n*gauss_mean
@@ -221,6 +228,8 @@ instance (Eq a, Ord a, Eq c, Num c) => Statistic (Counts a c) a where
             counts_map = M.alter (U.non 0 (+ (-1))) x counts_map,
             counts_total = counts_total - 1
         }
+    null Counts{counts_total = 0} = True
+    null _ = False
 
 merge :: (Ord a, Num c) => Counts a c -> Counts a c -> Counts a c
 merge (Counts m1 t1) (Counts m2 t2) = Counts {

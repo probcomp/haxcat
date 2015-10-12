@@ -36,7 +36,7 @@ import qualified Data.Vector as V
 
 import Data.Random.RVar
 
-import Utils (flipweights)
+import Utils (flipweights, nullify)
 import Models
 
 newtype RowID = RowID Int deriving (Eq, Ord)
@@ -176,8 +176,10 @@ view_row_uninc r_id (Row _ cell) View{..} =
         view_partition' = M.delete r_id view_partition
         view_columns' = M.mapWithKey col_uninc view_columns
         col_uninc :: ColID -> Column -> Column
-        col_uninc col_id (Column h m) = Column h (M.adjust (remove item) cluster_id m)
-            where item = fromJust $ cell col_id
+        col_uninc col_id (Column h m) = Column h m'
+            where m' = M.alter flush cluster_id m
+                  item = fromJust $ cell col_id
+                  flush = (>>= (nullify Models.null . remove item))
 
 -- Treats extra columns in the Row correctly, namely by ignoring them.
 -- TODO Tweak to ignore missing columns in the Row also (at fromJust)
