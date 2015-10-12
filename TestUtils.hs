@@ -57,35 +57,35 @@ bogodata2 rows cols = do
               pick col_id = (col_id, Data.Vector.fromList $ map (\(Row _ cell) -> fromJust $ cell col_id) rows)
 
 class StructureCheckable a where
-    assert_structural :: a -> Assertion
+    structure_test :: a -> Test
 
 instance (Eq c, Num c, Show c) => StructureCheckable (Counts a c) where
-    assert_structural Counts {..} =
-        do counts_total @?= (sum $ M.elems counts_map)
-           mapM_ non_zero $ M.elems counts_map
-               where non_zero e = assertBool "Zero count found" $ not $ e == 0
+    structure_test Counts {..} = test $ total : non_zeros
+        where total = counts_total ~?= (sum $ M.elems counts_map)
+              non_zeros = map non_zero $ M.elems counts_map
+              non_zero e = test $ assertBool "Zero count found" $ not $ e == 0
 
 instance StructureCheckable View where
-    assert_structural View {..} =
-        do assert_structural view_counts
-           assert_counts_agree_with_partition view_counts view_partition
-           mapM_ has_right_clusters $ M.elems view_columns
-               where has_right_clusters (Column _ suffs) =
-                         M.keys suffs @?= (uniq $ sort $ M.elems view_partition)
+    structure_test View {..} = test $ counts_ok : counts_agree : right_clusters
+        where counts_ok = structure_test view_counts
+              counts_agree = counts_agree_with_partition view_counts view_partition
+              right_clusters = map has_right_clusters $ M.elems view_columns
+              has_right_clusters (Column _ suffs) =
+                  M.keys suffs ~?= (uniq $ sort $ M.elems view_partition)
 
-assert_counts_agree_with_partition ::
-    (Ord a, Show a) => (Counts a Int) -> M.Map k a -> Assertion
-assert_counts_agree_with_partition cs part =
-    counts_to_asc_list cs @?= (sort $ M.elems part)
+counts_agree_with_partition ::
+    (Ord a, Show a) => (Counts a Int) -> M.Map k a -> Test
+counts_agree_with_partition cs part =
+    counts_to_asc_list cs ~?= (sort $ M.elems part)
 
 instance StructureCheckable Crosscat where
-    assert_structural Crosscat {..} =
-        do assert_structural cc_counts
-           assert_counts_agree_with_partition cc_counts cc_partition
-           mapM_ assert_structural $ M.elems cc_views
-           M.keys cc_views @?= (uniq $ sort $ M.elems cc_partition)
-           mapM_ sameRows $ map view_partition $ M.elems cc_views
-           mapM_ rightColumns $ groupBy ((==) `on` snd) $ sortOn snd $ M.toAscList cc_partition
-               where sameRows m = M.keys m @?= (M.keys $ view_partition $ head $ M.elems cc_views)
-                     rightColumns :: [(ColID, ViewID)] -> Assertion
-                     rightColumns cols = map fst cols @=? (M.keys $ view_columns $ fromJust $ M.lookup (snd $ head cols) cc_views)
+    structure_test Crosscat {..} = test $ counts_ok : counts_agree : views_ok ++ [views_agree] ++ all_same_rows ++ all_right_columns
+        where counts_ok = structure_test cc_counts
+              counts_agree = counts_agree_with_partition cc_counts cc_partition
+              views_ok = map structure_test $ M.elems cc_views
+              views_agree = M.keys cc_views ~?= (uniq $ sort $ M.elems cc_partition)
+              all_same_rows = map sameRows $ map view_partition $ M.elems cc_views
+              all_right_columns = map rightColumns $ groupBy ((==) `on` snd) $ sortOn snd $ M.toAscList cc_partition
+              sameRows m = M.keys m ~?= (M.keys $ view_partition $ head $ M.elems cc_views)
+              rightColumns :: [(ColID, ViewID)] -> Test
+              rightColumns cols = map fst cols ~=? (M.keys $ view_columns $ fromJust $ M.lookup (snd $ head cols) cc_views)

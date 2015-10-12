@@ -45,7 +45,7 @@ bogo_cc = evalState (sampleRVar bogogen) (mkStdGen 0)
 
 tests :: Test
 tests = test [ show bogo_cc ~?= bogostring
-             , test $ assert_structural bogo_cc
+             , structure_test bogo_cc
              ]
 
 main :: IO ()
