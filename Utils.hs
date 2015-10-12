@@ -94,11 +94,11 @@ gamma_inc a x = gamma (a + x) / gamma a
 bernoulli_weight :: Double -> Double -> Log Double
 bernoulli_weight alpha beta = Exp $ -log1p (beta/alpha)
 
-nullify :: (Eq a) => a -> a -> Maybe a
-nullify null thing | thing == null = Nothing
+nullify :: (a -> Bool) -> a -> Maybe a
+nullify null thing | null thing = Nothing
                    | otherwise = Just thing
 
 -- `non x` lifts an a -> a function to the Maybe a representation of
 -- the space "a except x".  The name is taken from Control.Lens.non
 non :: (Eq a) => a -> (a -> a) -> Maybe a -> Maybe a
-non x f = nullify x . f . fromMaybe x
+non x f = nullify (== x) . f . fromMaybe x
