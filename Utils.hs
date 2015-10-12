@@ -16,7 +16,7 @@
 
 module Utils where
 
-import Data.Maybe (isJust, fromJust)
+import Data.Maybe (isJust, fromJust, fromMaybe)
 import qualified Data.Map as M
 import Data.Random.RVar
 import Data.Random.Distribution.Categorical (weightedCategorical)
@@ -97,3 +97,8 @@ bernoulli_weight alpha beta = Exp $ -log1p (beta/alpha)
 nullify :: (Eq a) => a -> a -> Maybe a
 nullify null thing | thing == null = Nothing
                    | otherwise = Just thing
+
+-- `non x` lifts an a -> a function to the Maybe a representation of
+-- the space "a except x".  The name is taken from Control.Lens.non
+non :: (Eq a) => a -> (a -> a) -> Maybe a -> Maybe a
+non x f = nullify x . f . fromMaybe x

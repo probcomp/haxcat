@@ -214,11 +214,11 @@ data Counts a c = Counts {
 instance (Eq a, Ord a, Eq c, Num c) => Statistic (Counts a c) a where
     empty = Counts M.empty 0
     insert x Counts{..} = Counts {
-            counts_map = M.alter (U.nullify 0 . (+ 1) . maybe 0 id) x counts_map,
+            counts_map = M.alter (U.non 0 (+ 1)) x counts_map,
             counts_total = counts_total + 1
         }
     remove x Counts{..} = Counts {
-            counts_map = M.alter (U.nullify 0 . (+ (-1)) . maybe 0 id) x counts_map,
+            counts_map = M.alter (U.non 0 (+ (-1))) x counts_map,
             counts_total = counts_total - 1
         }
 
