@@ -24,7 +24,7 @@ Things to do (+ bullet means "done"):
     comparison is a little unfair.
 - "Crash" testing:
   + Fix the random seed in HaxcatTest and compare to known string
-  - Convert TestSmoke.hs into a cabalized benchmark executable (?)
+  + Convert TestSmoke.hs into a cabalized benchmark executable
   - Add a little test that exercises prediction with known results
   + Write code checking structural invariants
   - could write some diagnostic code, like # views, # clusters,
