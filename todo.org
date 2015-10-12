@@ -22,20 +22,21 @@ Things to do (+ bullet means "done"):
     - around 3x slower than crosscat (but tons of clusters -- too many?)
   - crosscat suffers from multinomials in satellites, so perhaps this
     comparison is a little unfair.
+  - flushing empty clusters seemed to help, but across-seed
+    variability is high
 - "Crash" testing:
   + Fix the random seed in HaxcatTest and compare to known string
   + Convert TestSmoke.hs into a cabalized benchmark executable
-  - Add a little test that exercises prediction with known results
   + Write code checking structural invariants
   - could write some diagnostic code, like # views, # clusters,
     and maybe watch it evolve
   - could write a test suite that generates some data and runs
     inference a while, checking that invariants are preserved.
-  - also exercise prediction (e.g., execution, finiteness, finiteness
-    of assessment)
+    - quickcheck over the parameters?
+  + Exercise prediction and assessment (e.g., it executes)
 - "Crash" fixes:
   - when gauss_n is zero I get NaN stats :(
-  - why are there clusters with zero rows in them in the end state?
+  + Flush empty clusters
 - Refactorings:
   - Flush NoStat?
   - Can I get rid of zipWithHoles via mergeWithKey?
