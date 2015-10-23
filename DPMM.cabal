@@ -25,6 +25,7 @@ library
                        log-domain, vector
   -- hs-source-dirs:
   default-language:    Haskell2010
+  Ghc-options:         -Wall -fno-warn-name-shadowing -O2
 
 Test-suite tests
   Type:                exitcode-stdio-1.0
@@ -44,5 +45,5 @@ executable bench-infer
                        -- for crosscat
                        log-domain, vector, HUnit
   default-language:    Haskell2010
-  ghc-options:         -Wall -O2 -rtsopts
+  ghc-options:         -Wall -fno-warn-name-shadowing -O2 -rtsopts
   ghc-prof-options:    -fprof-auto "-with-rtsopts=-s"
