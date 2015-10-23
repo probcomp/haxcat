@@ -39,7 +39,7 @@ Things to do (+ bullet means "done"):
   + Flush empty clusters
 - Refactorings:
   + Flush NoStat?
-  - Can I get rid of zipWithHoles via mergeWithKey?
+  + Can I get rid of zipWithHoles via mergeWithKey?
   + Define more compact Show instances for newtypes of ints: Ro, Co, Cl, Vw
   - Taylor says "CRP pdf_predictive should perhaps be rewritten in
     terms of bernoulli_weight [or multinomial]".
@@ -102,7 +102,7 @@ Cleanup:
 - Rewrite DPMM in terms of the abstractions defined in Models; re-test it
   - Else flush (or delimit?) it; flush DPMM-specific Utils;
 - Generalize Test.hs to also test Haxcat
-- Rename the cabal file to haxcat.cabal
++ Rename the cabal file to haxcat.cabal
 + Get permission from Baxter to relicense as Apache
   + Add copyright headers
 
