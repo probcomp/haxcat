@@ -170,9 +170,7 @@ data NIGNormal = NIGNormal {
     } deriving Show
 
 instance Model NIGNormal Double where
-    pdf = undefined -- I'm too lazy, and this will get hidden by the
-                    -- default implementation of pdf_predictive
-                    -- anyway.
+    pdf = compound_pdf
 
     -- Equation 176 or 206 of [1]; he parameterizes his t distribution
     -- with mean and variance as opposed to mean and scale here.
