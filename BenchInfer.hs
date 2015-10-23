@@ -27,7 +27,7 @@ import TestUtils
 
 bogogen :: RVar Crosscat
 bogogen = do
-  ds <- bogodata2 1167 23
+  ds <- bogodata2 300 23
   cc <- train ds 15
   return cc
 
