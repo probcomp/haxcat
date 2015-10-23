@@ -16,20 +16,27 @@
 
 module Main where
 
+import Control.Monad.State
 import Data.Random
 import Data.RVar (sampleRVar)
+import System.Random
 
+import Types
 import Haxcat
 import TestUtils
 
-sampleIO :: RVar a -> IO a
-sampleIO = sampleRVar
+bogogen :: RVar Crosscat
+bogogen = do
+  ds <- bogodata2 1167 23
+  cc <- train ds 15
+  return cc
+
+bogo_cc :: Crosscat
+bogo_cc = evalState (sampleRVar bogogen) (mkStdGen 0)
 
 main :: IO ()
 main = do
-  ds <- sampleIO $ bogodata2 1167 23
-  cc <- sampleIO $ train ds 15
-  putStrLn $ show cc
+  putStrLn $ show bogo_cc
   putStrLn "done"
 
 -- Up to the effects of input distribution on performance, satellites is

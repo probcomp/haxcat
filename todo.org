@@ -56,6 +56,8 @@ Things to do (+ bullet means "done"):
     crp (mapping rows to clusters); and I may be able to reuse that
     object in the relevant part of crosscat too.
 - Benefit: profile inference
+  cabal configure --enable-executable-profiling
+  cabal build bench-infer && time dist/build/bench-infer/bench-infer +RTS -p -hc
 - Benefit: geweke test 1 x m
   - Only tests the NIG Normal code
   - geweke runner ought to have type
