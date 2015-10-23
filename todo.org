@@ -38,7 +38,7 @@ Things to do (+ bullet means "done"):
   - when gauss_n is zero I get NaN stats :(
   + Flush empty clusters
 - Refactorings:
-  - Flush NoStat?
+  + Flush NoStat?
   - Can I get rid of zipWithHoles via mergeWithKey?
   + Define more compact Show instances for newtypes of ints: Ro, Co, Cl, Vw
   - Taylor says "CRP pdf_predictive should perhaps be rewritten in

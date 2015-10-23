@@ -50,13 +50,6 @@ class Statistic stat elt | stat -> elt where
     -- but other stats might also be null
     null :: stat -> Bool
 
-data NoStat a = NoStat
-instance Statistic (NoStat a) a where
-    empty = NoStat
-    insert _ _ = NoStat
-    remove _ _ = NoStat
-    null _ = True
-
 class (Statistic stat elt) => CompoundModel m stat elt
         | m -> stat elt where
     -- p(t | alpha) = integral of p(t | theta) p(theta | alpha) dtheta
