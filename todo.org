@@ -66,6 +66,13 @@ Things to do (+ bullet means "done"):
     - But, around 100k of it is unboxed doubles?
     - another around 100k is interior nodes of Data.Maps
   - Probably some numeric code didn't get unboxed properly
+  - Strictifying (and presumably therefore unboxing) the fields of
+    GaussStats and NIGNormal reduces allocation by about a third,
+    doesn't seem to help overall speed, but seems to shift work into
+    the numerical computations
+  - Explicitly unboxing the vectors that hold the data set helps
+    persistent memory use some, and drastically reduces the number D#
+    constructors being retained
 - Benefit: geweke test 1 x m
   - Only tests the NIG Normal code
   - geweke runner ought to have type
