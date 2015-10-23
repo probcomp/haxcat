@@ -66,6 +66,9 @@ class (Statistic stat elt) => CompoundModel m stat elt
         pdf  = pdf_marginal m stats
         pdf' = pdf_marginal m (insert x stats)
 
+compound_pdf :: (CompoundModel m stat elt) => m -> PDF elt
+compound_pdf = pdf_predictive empty
+
 class (Model m elt, CompoundModel m stat elt) => ConjugateModel m stat elt
   where
     update :: stat -> m -> m
