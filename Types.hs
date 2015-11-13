@@ -101,7 +101,7 @@ data CRPSequence k v = CRPSequence
     , crp_seq_counts :: Counts v Int
     , crp_seq_results :: M.Map k v
     }
-    deriving Show
+    deriving (Eq, Show)
 
 crp_seq_uninc :: (Ord k, Ord v) => k -> CRPSequence k v -> CRPSequence k v
 crp_seq_uninc key CRPSequence{..} =
@@ -166,6 +166,13 @@ data Column = forall hypers stats.
 
 deriving instance Show Column
 
+-- XXX Hack hack hack hack blame GHC can't check whether the Eq
+-- dictionary that column A has for e.g. its hypers is or is not the
+-- same as the Eq dictionary column B has for its, so there is no way
+-- to make a proper Eq instance for Columns.
+instance Eq Column where
+    a == b = show a == show b
+
 type Partition = M.Map RowID ClusterID
 
 recompute_suff_stats :: (Statistic stat elt) => Partition -> ColumnData elt -> (M.Map ClusterID stat)
@@ -184,7 +191,7 @@ data View = View
     { view_partition :: CRPSequence RowID ClusterID
     , view_columns :: M.Map ColID Column
     }
-    deriving Show
+    deriving (Eq, Show)
 -- INVARIANT: The stats held in each column have to agree with the
 --   partition and the (implicit) per-column data.
 -- This is a specialization/generalization of Mixture, above:
@@ -253,7 +260,7 @@ data Crosscat = Crosscat
     , cc_partition :: M.Map ColID ViewID
     , cc_views :: M.Map ViewID View
     }
-    deriving Show
+    deriving (Eq, Show)
 
 cc_empty :: CRP ViewID -> Crosscat
 cc_empty crp = Crosscat crp empty M.empty M.empty

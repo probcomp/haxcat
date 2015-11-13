@@ -211,7 +211,7 @@ instance ConjugateModel NIGNormal GaussStats Double where
 data Counts a c = Counts {
         counts_map :: M.Map a c,
         counts_total :: c
-    } deriving Show
+    } deriving (Eq, Show)
 instance (Eq a, Ord a, Eq c, Num c) => Statistic (Counts a c) a where
     empty = Counts M.empty 0
     insert x Counts{..} = Counts {
@@ -265,7 +265,7 @@ instance (Eq a, Ord a)
             sum_counts' = fromIntegral sum_counts
 
 -- CRP is different because it's collapsed without being conjugate.
-data CRP a = CRP a Double deriving Show
+data CRP a = CRP a Double deriving (Eq, Show)
 instance (Ord a, Enum a) => CompoundModel (CRP a) (Counts a Int) a where
     pdf_marginal = undefined -- TODO This is well-defined, but I'm lazy
     pdf_predictive cs crp x = log_domain $ pdf_predictive_direct_crp cs crp x
