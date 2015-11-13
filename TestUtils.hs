@@ -66,16 +66,22 @@ instance (Eq c, Num c, Show c) => StructureCheckable (Counts a c) where
               non_zeros = map non_zero $ M.elems counts_map
               non_zero e = test $ assertBool "Zero count found" $ not $ e == 0
 
+instance (Ord v, Show v) => StructureCheckable (CRPSequence k v) where
+    structure_test CRPSequence {..} =
+        test [ ("counts_ok" ~: structure_test crp_seq_counts)
+             , ("counts agree" ~: cts)
+             ]
+        where cts = counts_agree_with_partition crp_seq_counts crp_seq_results
+
 instance StructureCheckable View where
     structure_test View {..} =
-        test [ ("counts" ~: [counts_ok, counts])
+        test [ ("partition" ~: structure_test view_partition)
              , ("clusters agree with partition" ~: right_clusters)
              ]
-        where counts_ok = structure_test view_counts
-              counts = counts_agree_with_partition view_counts view_partition
-              right_clusters = map has_right_clusters $ M.elems view_columns
+        where right_clusters = map has_right_clusters $ M.elems view_columns
               has_right_clusters (Column _ suffs) =
-                  M.keys suffs ~?= (uniq $ sort $ M.elems view_partition)
+                  M.keys suffs ~?= (uniq $ sort $ M.elems
+                                   $ crp_seq_results view_partition)
 
 counts_agree_with_partition ::
     (Ord a, Show a) => (Counts a Int) -> M.Map k a -> Test
@@ -95,10 +101,12 @@ instance StructureCheckable Crosscat where
           counts_agree = counts_agree_with_partition cc_counts cc_partition
           views_ok = map structure_test $ M.elems cc_views
           views_there = M.keys cc_views ~?= (uniq $ sort $ M.elems cc_partition)
-          same_rows = map sameRows $ map view_partition $ M.elems cc_views
+          same_rows = map sameRows $ map (crp_seq_results . view_partition)
+                      $ M.elems cc_views
           right_columns = map rightColumns $ groupBy ((==) `on` snd)
                           $ sortOn snd $ M.toAscList cc_partition
-          one_partition = view_partition $ head $ M.elems cc_views
+          one_partition = crp_seq_results $ view_partition $ head
+                          $ M.elems cc_views
           sameRows m = M.keys m ~?= M.keys one_partition
           rightColumns :: [(ColID, ViewID)] -> Test
           rightColumns cols =
