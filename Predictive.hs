@@ -59,8 +59,9 @@ view_predict r_id view = do
   return (ans, view'')
 
 cc_sample :: Crosscat -> RVar Row
-cc_sample Crosscat{..} = liftM (map_to_row . M.foldl' M.union M.empty) per_view where
-    per_view = mapM view_sample cc_views
+cc_sample Crosscat{..} = liftM (map_to_row . M.foldl' M.union M.empty) per_view
+    where
+      per_view = mapM view_sample cc_views
 
 cc_predict :: RowID -> Crosscat -> RVar (Row, Crosscat)
 cc_predict r_id Crosscat{..} = do
