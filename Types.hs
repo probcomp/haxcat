@@ -122,6 +122,12 @@ crp_seq_reinc key val CRPSequence{..} =
 crp_seq_lookup :: (Ord k) => k -> CRPSequence k v -> Maybe v
 crp_seq_lookup key = M.lookup key . crp_seq_results
 
+crp_seq_empty :: (Ord k, Ord v, Enum v) =>
+                 CRP v -> [k] -> RVar (CRPSequence k v)
+crp_seq_empty crp keys = do
+  (partition, counts) <- crp_sample_partition empty crp keys
+  return $ CRPSequence crp counts partition
+
 -- Note: As written here, Crosscat will not end up being a very nice
 -- CRP mixture of CRP mixtures, because either
 -- - the inner mixtures would correspond to views, and so would need
@@ -226,9 +232,7 @@ view_nonempty v@View{view_columns = cs} | M.size cs == 0 = Nothing
 
 -- The row ids and the entropy are for initializing a random partition
 view_empty :: CRP ClusterID -> [RowID] -> RVar View
-view_empty crp rows = do
-  (partition, counts) <- crp_sample_partition empty crp rows
-  return $ View crp counts M.empty partition
+view_empty crp rows = liftM (flip View M.empty) $ crp_seq_empty crp rows
 
 -- Choice point: are cluster ids unique or shared across columns?
 -- - If unique, then partitions are column-specific, and I have to write
