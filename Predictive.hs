@@ -33,7 +33,7 @@ import Types
 import RowSweep (view_weights)
 
 view_cluster_sample :: View -> RVar ClusterID
-view_cluster_sample View{..} = sample_predictive view_counts view_crp
+view_cluster_sample View{..} = crp_seq_sample view_partition
 
 column_sample :: ClusterID -> Column -> RVar Double
 column_sample c_id (Column hypers m) = sample_predictive stats hypers where
