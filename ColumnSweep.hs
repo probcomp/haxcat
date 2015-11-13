@@ -82,7 +82,7 @@ col_step col_id d cc@Crosscat{cc_views = old_view_set} = do
         likelihood (w, v_id) = ((v_id, new_col), (column_full_pdf new_col) * log_domain w)
               where new_col = repartition part d col
                     part = crp_seq_results $ view_partition $ view_for v_id
-        prior_weights = crp_weights cc_counts cc_crp
+        prior_weights = crp_seq_weights cc_partition
         full_weights = map likelihood prior_weights
     (new_v_id, col') <- flipweights_ld full_weights
     return $ cc_col_reinc col_id col' new_v_id (view_for new_v_id) cc'

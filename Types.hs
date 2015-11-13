@@ -128,6 +128,10 @@ crp_seq_empty crp keys = do
   (partition, counts) <- crp_sample_partition empty crp keys
   return $ CRPSequence crp counts partition
 
+-- If there are no keys, the result is not random.
+crp_seq_empty' :: (Ord v) => CRP v -> CRPSequence k v
+crp_seq_empty' crp = CRPSequence crp empty M.empty
+
 crp_seq_weights :: (Ord v, Enum v) => CRPSequence k v -> [(Double, v)]
 crp_seq_weights CRPSequence{..} = crp_weights crp_seq_counts crp_seq_crp
 
@@ -255,27 +259,24 @@ view_empty crp rows = liftM (flip View M.empty) $ crp_seq_empty crp rows
 -- Decision: shared.
 
 data Crosscat = Crosscat
-    { cc_crp :: CRP ViewID
-    , cc_counts :: Counts ViewID Int
-    , cc_partition :: M.Map ColID ViewID
+    { cc_partition :: CRPSequence ColID ViewID
     , cc_views :: M.Map ViewID View
     }
     deriving (Eq, Show)
 
 cc_empty :: CRP ViewID -> Crosscat
-cc_empty crp = Crosscat crp empty M.empty M.empty
+cc_empty crp = Crosscat (crp_seq_empty' crp) M.empty
 
 col_for :: Crosscat -> ColID -> Column
 col_for Crosscat {..} c_id = fromJust $ M.lookup c_id (view_columns view)
     where view = fromJust $ M.lookup view_id cc_views
-          view_id = fromJust $ M.lookup c_id cc_partition
+          view_id = fromJust $ crp_seq_lookup c_id cc_partition
 
 cc_col_uninc :: ColID -> Crosscat -> Crosscat
 cc_col_uninc col_id Crosscat {..} =
-    Crosscat cc_crp cc_counts' cc_partition' cc_views' where
-        view_id = fromJust $ M.lookup col_id cc_partition
-        cc_counts' = remove view_id cc_counts
-        cc_partition' = M.delete col_id cc_partition
+    Crosscat cc_partition' cc_views' where
+        view_id = fromJust $ crp_seq_lookup col_id cc_partition
+        cc_partition' = crp_seq_uninc col_id cc_partition
         cc_views' = M.update flush view_id cc_views
         flush :: View -> Maybe View
         flush = view_nonempty . view_col_uninc col_id
@@ -287,12 +288,9 @@ cc_col_uninc col_id Crosscat {..} =
 --   ViewID (i.e., if the column is becoming a singleton)
 cc_col_reinc :: ColID -> Column -> ViewID -> View -> Crosscat -> Crosscat
 cc_col_reinc col_id col view_id view Crosscat{..} =
-    case M.lookup col_id cc_partition of
-      Nothing  -> Crosscat cc_crp cc_counts' cc_partition' cc_views'
-      (Just _) -> error "Reincorporating id that was not unincorporated"
+  Crosscat cc_partition' cc_views'
     where
-      cc_counts' = insert view_id cc_counts
-      cc_partition' = M.insert col_id view_id cc_partition
+      cc_partition' = crp_seq_reinc col_id view_id cc_partition
       cc_views' = M.alter view_inc view_id cc_views
       view_inc maybe_view = Just $ view_col_reinc col_id col $ fromMaybe view maybe_view
 
@@ -321,7 +319,7 @@ cc_insert_col_from_prior :: ColID -> ColumnData Double -> Crosscat -> RVar Cross
 cc_insert_col_from_prior col_id d cc@Crosscat{..} = do
   -- TODO Can we avoid sampling a candidate view if the column gets
   -- added to an existing view?  Will laziness just do that?
-  let prior_weights = crp_weights cc_counts cc_crp
+  let prior_weights = crp_seq_weights cc_partition
   view_id <- flipweights $ map swap prior_weights
   candidate_view <- view_empty new_crp row_ids
   let view = fromMaybe candidate_view $ M.lookup view_id cc_views

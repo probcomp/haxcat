@@ -44,13 +44,15 @@ bogogen = do
 
 bogo_cc_expect :: Crosscat
 bogo_cc_expect = Crosscat
-  { cc_crp = CRP (ViewID 0) 1.0
-  , cc_counts = Counts { counts_map = M.fromList [(ViewID 5,3)]
-                       , counts_total = 3}
-  , cc_partition = M.fromList [ (ColID 0, ViewID 5)
-                              , (ColID 1, ViewID 5)
-                              , (ColID 2, ViewID 5)
-                              ]
+  { cc_partition = CRPSequence
+    { crp_seq_crp = CRP (ViewID 0) 1.0
+    , crp_seq_counts = Counts { counts_map = M.fromList [(ViewID 5,3)]
+                              , counts_total = 3}
+    , crp_seq_results = M.fromList [ (ColID 0, ViewID 5)
+                                   , (ColID 1, ViewID 5)
+                                   , (ColID 2, ViewID 5)
+                                   ]
+    }
   , cc_views = M.fromList [(ViewID 5,the_view)]
   } where
     the_view = View
