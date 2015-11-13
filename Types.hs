@@ -214,19 +214,25 @@ view_col_reinc :: ColID -> Column -> View -> View
 view_col_reinc col_id col v@View{view_columns = cs} = v{view_columns = cs'}
     where cs' = M.insert col_id col cs
 
+view_cluster_uninc :: RowID -> View -> View
+view_cluster_uninc r_id v@View{view_partition = vp} = v{view_partition = vp'}
+    where vp' = crp_seq_uninc r_id vp
+
 -- Treats extra columns in the Row correctly, namely by ignoring them.
 -- TODO Tweak to ignore missing columns in the Row also (at fromJust)
-view_row_uninc :: RowID -> Row -> View -> View
-view_row_uninc r_id (Row _ cell) View{..} =
-    View view_partition' view_columns' where
+view_row_only_uninc :: RowID -> Row -> View -> View
+view_row_only_uninc r_id (Row _ cell) View{..} =
+    View view_partition view_columns' where
         cluster_id = fromJust $ crp_seq_lookup r_id view_partition
-        view_partition' = crp_seq_uninc r_id view_partition
         view_columns' = M.mapWithKey col_uninc view_columns
         col_uninc :: ColID -> Column -> Column
         col_uninc col_id (Column h m) = Column h m'
             where m' = M.alter flush cluster_id m
                   item = fromJust $ cell col_id
                   flush = (>>= (nullify Models.null . remove item))
+
+view_row_uninc :: RowID -> Row -> View -> View
+view_row_uninc r_id r = view_cluster_uninc r_id . view_row_only_uninc r_id r
 
 -- Treats extra columns in the Row correctly, namely by ignoring them.
 -- TODO Tweak to ignore missing columns in the Row also (at fromJust)

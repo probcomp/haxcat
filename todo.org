@@ -107,11 +107,12 @@ Things to do (+ bullet means "done"):
     column map
     - define crp_mixture_{{re,un}inc,sample} etc
   + Derive Eq and make the bogo test structural
-  - See whether I can pull the same thing from Crosscat
+  + See whether I can pull the same thing from Crosscat
   - Split "view unincorporation" into removing the datum (leaving a
     "crp mixture predict") and removing the latent also (which is what
     the current thing does)
-    - I don't like the nomenclature implications
+    - Names: view_{cluster,row,}_{sample,predict}
+      view_{cluster,col,row,row_only}_{re,un}inc
   - Define "cc row unincorporation", with the same split
   - Add a map of incorporated rows to View (which will be static
     during inference sweeps, but used actively during Geweke testing)
