@@ -62,6 +62,14 @@ cc_sample :: Crosscat -> RVar Row
 cc_sample Crosscat{..} = liftM (map_to_row . M.foldl' M.union M.empty) per_view where
     per_view = mapM view_sample cc_views
 
+cc_predict :: RowID -> Crosscat -> RVar (Row, Crosscat)
+cc_predict r_id Crosscat{..} = do
+  -- per_view :: M.Map ViewID (M.Map ColID Double, View)
+  per_view <- mapM (view_predict r_id) cc_views
+  let cc_views' = M.map snd per_view
+      row = map_to_row $ M.foldl' M.union M.empty $ M.map fst per_view
+  return (row, Crosscat cc_partition cc_views')
+
 view_pdf_predictive :: View -> PDF Row
 view_pdf_predictive view row = Log.sum $ map snd $ view_weights view row
 
