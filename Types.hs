@@ -94,6 +94,34 @@ instance Model (Mixture prior p_stats comp c_stats element) element where
     -- There is also the aggregate probability of the component
     -- stats, which has no name in this typeclass
 
+-- A sequence of items from a CRP b, each associated with an a
+-- INVARIANT: The counts have to agree with the results.
+data CRPSequence k v = CRPSequence
+    { crp_seq_crp :: CRP v
+    , crp_seq_counts :: Counts v Int
+    , crp_seq_results :: M.Map k v
+    }
+    deriving Show
+
+crp_seq_uninc :: (Ord k, Ord v) => k -> CRPSequence k v -> CRPSequence k v
+crp_seq_uninc key CRPSequence{..} =
+    CRPSequence crp_seq_crp crp_seq_counts' crp_seq_results' where
+        answer = fromJust $ M.lookup key crp_seq_results
+        crp_seq_counts' = remove answer crp_seq_counts
+        crp_seq_results' = M.delete key crp_seq_results
+
+crp_seq_reinc :: (Ord k, Ord v) => k -> v -> CRPSequence k v -> CRPSequence k v
+crp_seq_reinc key val CRPSequence{..} =
+    case M.lookup key crp_seq_results of
+      Nothing -> CRPSequence crp_seq_crp crp_seq_counts' crp_seq_results'
+      (Just _) -> error "Reincorporating key that was not unincorporated"
+    where
+      crp_seq_counts' = insert val crp_seq_counts
+      crp_seq_results' = M.insert key val crp_seq_results
+
+crp_seq_lookup :: (Ord k) => k -> CRPSequence k v -> Maybe v
+crp_seq_lookup key = M.lookup key . crp_seq_results
+
 -- Note: As written here, Crosscat will not end up being a very nice
 -- CRP mixture of CRP mixtures, because either
 -- - the inner mixtures would correspond to views, and so would need
@@ -141,13 +169,10 @@ repartition p d (Column hypers _) =
     Column hypers $ recompute_suff_stats p d
 
 data View = View
-    { view_crp :: CRP ClusterID
-    , view_counts :: Counts ClusterID Int
+    { view_partition :: CRPSequence RowID ClusterID
     , view_columns :: M.Map ColID Column
-    , view_partition :: Partition
     }
     deriving Show
--- INVARIANT: The counts have to agree with the partition.
 -- INVARIANT: The stats held in each column have to agree with the
 --   partition and the (implicit) per-column data.
 -- This is a specialization/generalization of Mixture, above:
@@ -170,10 +195,9 @@ view_col_reinc col_id col v@View{view_columns = cs} = v{view_columns = cs'}
 -- TODO Tweak to ignore missing columns in the Row also (at fromJust)
 view_row_uninc :: RowID -> Row -> View -> View
 view_row_uninc r_id (Row _ cell) View{..} =
-    View view_crp view_counts' view_columns' view_partition' where
-        cluster_id = fromJust $ M.lookup r_id view_partition
-        view_counts' = remove cluster_id view_counts
-        view_partition' = M.delete r_id view_partition
+    View view_partition' view_columns' where
+        cluster_id = fromJust $ crp_seq_lookup r_id view_partition
+        view_partition' = crp_seq_uninc r_id view_partition
         view_columns' = M.mapWithKey col_uninc view_columns
         col_uninc :: ColID -> Column -> Column
         col_uninc col_id (Column h m) = Column h m'
@@ -187,12 +211,8 @@ view_row_uninc r_id (Row _ cell) View{..} =
 -- candidate new cluster.
 view_row_reinc :: RowID -> Row -> ClusterID -> View -> View
 view_row_reinc r_id (Row _ cell) cluster_id View{..} =
-    case M.lookup r_id view_partition of
-      Nothing -> View view_crp view_counts' view_columns' view_partition'
-      (Just _) -> error "Reincorporating row id that was not unincorporated"
-    where
-      view_counts' = insert cluster_id view_counts
-      view_partition' = M.insert r_id cluster_id view_partition
+    View view_partition' view_columns' where
+      view_partition' = crp_seq_reinc r_id cluster_id view_partition
       view_columns' = M.mapWithKey col_reinc view_columns
       col_reinc :: ColID -> Column -> Column
       col_reinc col_id (Column h m) = Column h (M.alter add_datum cluster_id m)
