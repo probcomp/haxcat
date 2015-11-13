@@ -103,9 +103,10 @@ Things to do (+ bullet means "done"):
     views read access to the set of actual data items that have been
     incorporated (as a Map RowID Row, presumably)
 - Plan of attack:
-  - Pull out CRPMixture or something from View, leaving that and the
+  + Pull out CRPMixture or something from View, leaving that and the
     column map
     - define crp_mixture_{{re,un}inc,sample} etc
+  + Derive Eq and make the bogo test structural
   - See whether I can pull the same thing from Crosscat
   - Split "view unincorporation" into removing the datum (leaving a
     "crp mixture predict") and removing the latent also (which is what

@@ -17,7 +17,8 @@
 module Main where
 
 import System.Exit
-import Test.HUnit
+import Test.HUnit hiding (Counts)
+import qualified Test.HUnit
 
 import Control.Monad.State
 import qualified Data.Map as M
@@ -25,6 +26,7 @@ import Data.Random
 import Data.RVar (sampleRVar)
 import System.Random
 
+import Models
 import Types
 import Haxcat
 import TestUtils
@@ -40,8 +42,59 @@ bogogen = do
   row <- cc_sample cc
   return (cc, row)
 
-bogostring :: String
-bogostring = "Crosscat {cc_crp = CRP (V 0) 1.0, cc_counts = Counts {counts_map = fromList [(V 5,3)], counts_total = 3}, cc_partition = fromList [(Co 0,V 5),(Co 1,V 5),(Co 2,V 5)], cc_views = fromList [(V 5,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 3,1),(Cl 6,1),(Cl 7,1),(Cl 8,1),(Cl 9,1)], counts_total = 5}, crp_seq_results = fromList [(R 0,Cl 3),(R 1,Cl 6),(R 2,Cl 7),(R 3,Cl 8),(R 4,Cl 9)]}, view_columns = fromList [(Co 0,Column (NIGNormal {nign_r = 1.0, nign_nu = 1.0, nign_s = 1.0, nign_mu = 1.0}) (fromList [(Cl 3,GaussStats {gauss_n = 1, gauss_mean = 2.563631143649543, gauss_nvar = 0.0}),(Cl 6,GaussStats {gauss_n = 1, gauss_mean = 1.3145898907033204, gauss_nvar = 0.0}),(Cl 7,GaussStats {gauss_n = 1, gauss_mean = 0.2486050939519282, gauss_nvar = 0.0}),(Cl 8,GaussStats {gauss_n = 1, gauss_mean = 1.921030057038249, gauss_nvar = 0.0}),(Cl 9,GaussStats {gauss_n = 1, gauss_mean = -1.1249373927282202, gauss_nvar = 0.0})])),(Co 1,Column (NIGNormal {nign_r = 1.0, nign_nu = 1.0, nign_s = 1.0, nign_mu = 1.0}) (fromList [(Cl 3,GaussStats {gauss_n = 1, gauss_mean = -1.783058357042168, gauss_nvar = -1.1102230246251565e-16}),(Cl 6,GaussStats {gauss_n = 1, gauss_mean = 4.073453143716454, gauss_nvar = 0.0}),(Cl 7,GaussStats {gauss_n = 1, gauss_mean = 0.15553733525895386, gauss_nvar = 0.0}),(Cl 8,GaussStats {gauss_n = 1, gauss_mean = 4.2026631704803, gauss_nvar = 0.0}),(Cl 9,GaussStats {gauss_n = 1, gauss_mean = -0.46638032363463977, gauss_nvar = 0.0})])),(Co 2,Column (NIGNormal {nign_r = 1.0, nign_nu = 1.0, nign_s = 1.0, nign_mu = 1.0}) (fromList [(Cl 3,GaussStats {gauss_n = 1, gauss_mean = 1.4295253756550719, gauss_nvar = 0.0}),(Cl 6,GaussStats {gauss_n = 1, gauss_mean = 66.73403208085037, gauss_nvar = 0.0}),(Cl 7,GaussStats {gauss_n = 1, gauss_mean = -6.42991326618917, gauss_nvar = 0.0}),(Cl 8,GaussStats {gauss_n = 1, gauss_mean = 0.7709230346501312, gauss_nvar = 0.0}),(Cl 9,GaussStats {gauss_n = 1, gauss_mean = -0.125360946703319, gauss_nvar = 0.0})]))]})]}"
+bogo_cc_expect :: Crosscat
+bogo_cc_expect = Crosscat
+  { cc_crp = CRP (ViewID 0) 1.0
+  , cc_counts = Counts { counts_map = M.fromList [(ViewID 5,3)]
+                       , counts_total = 3}
+  , cc_partition = M.fromList [ (ColID 0, ViewID 5)
+                              , (ColID 1, ViewID 5)
+                              , (ColID 2, ViewID 5)
+                              ]
+  , cc_views = M.fromList [(ViewID 5,the_view)]
+  } where
+    the_view = View
+      { view_partition = CRPSequence
+        { crp_seq_crp = CRP (ClusterID 0) 1.0
+        , crp_seq_counts = Counts
+          { counts_map = M.fromList [ (ClusterID 3,1)
+                                    , (ClusterID 6,1)
+                                    , (ClusterID 7,1)
+                                    , (ClusterID 8,1)
+                                    , (ClusterID 9,1)]
+          , counts_total = 5
+          }
+        , crp_seq_results = M.fromList [ (RowID 0, ClusterID 3)
+                                       , (RowID 1, ClusterID 6)
+                                       , (RowID 2, ClusterID 7)
+                                       , (RowID 3, ClusterID 8)
+                                       , (RowID 4, ClusterID 9)
+                                       ]
+        }
+      , view_columns = M.fromList
+        [ (ColID 0, Column (NIGNormal {nign_r = 1.0, nign_nu = 1.0, nign_s = 1.0, nign_mu = 1.0})
+           (M.fromList [ (ClusterID 3, GaussStats 1   2.563631143649543   0.0)
+                       , (ClusterID 6, GaussStats 1   1.3145898907033204  0.0)
+                       , (ClusterID 7, GaussStats 1   0.2486050939519282  0.0)
+                       , (ClusterID 8, GaussStats 1   1.921030057038249   0.0)
+                       , (ClusterID 9, GaussStats 1 (-1.1249373927282202) 0.0)
+                       ]))
+        , (ColID 1, Column (NIGNormal {nign_r = 1.0, nign_nu = 1.0, nign_s = 1.0, nign_mu = 1.0})
+           (M.fromList [ (ClusterID 3, GaussStats 1 (-1.783058357042168) (-1.1102230246251565e-16))
+                       , (ClusterID 6, GaussStats 1   4.073453143716454    0.0)
+                       , (ClusterID 7, GaussStats 1   0.15553733525895386  0.0)
+                       , (ClusterID 8, GaussStats 1   4.2026631704803      0.0)
+                       , (ClusterID 9, GaussStats 1 (-0.46638032363463977) 0.0)
+                       ]))
+        , (ColID 2, Column (NIGNormal {nign_r = 1.0, nign_nu = 1.0, nign_s = 1.0, nign_mu = 1.0})
+           (M.fromList [ (ClusterID 3, GaussStats 1   1.4295253756550719  0.0)
+                       , (ClusterID 6, GaussStats 1  66.73403208085037    0.0)
+                       , (ClusterID 7, GaussStats 1 (-6.42991326618917)   0.0)
+                       , (ClusterID 8, GaussStats 1   0.7709230346501312  0.0)
+                       , (ClusterID 9, GaussStats 1 (-0.125360946703319)  0.0)
+                       ]))
+        ]
+      }
 
 bogo_cc_row :: (Crosscat, Row)
 bogo_cc_row = evalState (sampleRVar bogogen) (mkStdGen 0)
@@ -56,7 +109,7 @@ bogo_row = snd bogo_cc_row
 -- fixed seed); the actual values here do not represent the result of
 -- any analysis.
 tests :: Test
-tests = test [ show bogo_cc ~?= bogostring
+tests = test [ bogo_cc ~?= bogo_cc_expect
              , structure_test bogo_cc
              , row_to_map bogo_row ~?= M.fromList [ (ColID 0,-2.6221942999884886)
                                                   , (ColID 1,0.5917825321828307)
@@ -66,7 +119,7 @@ tests = test [ show bogo_cc ~?= bogostring
 
 main :: IO ()
 main = do
-  Counts { failures = f, errors = e } <- runTestTT $ tests
+  Test.HUnit.Counts { failures = f, errors = e } <- runTestTT $ tests
   if f + e > 0 then
       exitWith $ ExitFailure $ f + e
   else
