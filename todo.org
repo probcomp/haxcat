@@ -64,10 +64,30 @@ Things to do (+ bullet means "done"):
       - unincorporates from the cc-wide suff stats
       - runs the view_row_steps
       - reincorporates with the new cluster ids
-  - Might be better to introduce a new object, e.g. CRPMixture, which
+  + Might be better to introduce a new object, e.g. CRPMixture, which
     just knows the CRP, counts, and partition, and split View into a
     CRPMixture and the current column map.
     - Then Crosscat becomes a CRPMixture and the cc_views thing
+  - Could add a map of incorporated rows to View (which will be static
+    during inference sweeps, but used actively during Geweke testing)
+    - Consequence: uninc wouldn't need to accept the Row
+    - Funny consequence: inference wouldn't need to accept the dataset
+      - To actually do that, would need to reconstruct the column data
+        during column sweeps, or keep a redundant view of it
+    - May be paying with extra map lookups if I do this
+  - Could split view sampling into components
+    - Names: view{_cluster,_row,}_sample
+- I am somewhat confused about sampling.
+  - I can always define sample as evalState predict (that is, throw
+    away the incorporation)
+  - The laziness might even be smart enough to avoid the extra work
+  - But, the sample methods I have don't even take a row id, and
+    assume it's always a fresh row
+  - I should also be able to define predict as sample+incorporate
+    - May tweak sampling to take the row id and check whether it was
+      already present
+    - Corrent incorporate assumes the incorporee is fresh, but could
+      make a version that checks
 - Benefit: profile inference
   - cabal configure --enable-executable-profiling
   - cabal build bench-infer && time dist/build/bench-infer/bench-infer +RTS -p -hc
@@ -86,22 +106,14 @@ Things to do (+ bullet means "done"):
   - Explicitly unboxing the vectors that hold the data set helps
     persistent memory use some, and drastically reduces the number D#
     constructors being retained
-- For simulation, would want:
-  - view_cluster_predict :: RowID -> View -> RVar (ClusterID, View)
-       which is a view_cluster_sample and a view_cluster_reinc if the
-       row id is fresh, or produces the old value if it is stale
-  - view_predict :: RowID -> View -> RVar (M.Map ColID Double, View)
-    which does a view_sample and a view_reinc if the row id is fresh
-    (and does what if it is stale? can't return the current value without
-    access to the dataset, which the view doesn't actually store)
-  - I also have the problem that I may want to have partially
-    incorporated views: ones whose partition is present and
-    incorporated, but whose component suff stats are not.  Prediction
-    is well-defined in this case: use the existing cluster assignment,
-    make up an end value, and incorporate it into the suffstats.  The
-    trouble is detecting this state; for which I seem to want to give
-    views read access to the set of actual data items that have been
-    incorporated (as a Map RowID Row, presumably)
+- Elaboration: I want to have partially incorporated views: ones whose
+  partition is present and incorporated, but whose component suff
+  stats are not.  Prediction is well-defined in this case: use the
+  existing cluster assignment, make up an end value, and incorporate
+  it into the suffstats.  The trouble is detecting this state; for
+  which I seem to want to give views read access to the set of actual
+  data items that have been incorporated (as a Map RowID Row,
+  presumably)
 - Plan of attack:
   + Pull out CRPMixture or something from View, leaving that and the
     column map
@@ -113,18 +125,7 @@ Things to do (+ bullet means "done"):
     the current thing does)
     - Names: view_{cluster,col,row,row_only}_{re,un}inc
   + Define "cc row unincorporation", with the same split
-  - Split view sampling into components
-    - Names: view{_cluster,_row,}_sample
-  - Add a map of incorporated rows to View (which will be static
-    during inference sweeps, but used actively during Geweke testing)
-    - Consequence: uninc wouldn't need to accept the Row
-    - Funny consequence: inference wouldn't need to accept the dataset
-      - To actually do that, would need to reconstruct the column data
-        during column sweeps, or keep a redundant view of it
-      - May be paying with extra map lookups if I do that
-  - Define _predict for CRPMixture, view, and crosscat-rowwise
-    - I think I still need two names for the view and cc versions, to
-      distinguish prediction to the datum or just the latent
+  + Define _predict for CRPMixture, view, and crosscat-rowwise
     - Names: view{_cluster,_row,}_predict
     - The assumption-free version of view predict would need to read
       the dataset in order to repeat previously predicted items (but,
