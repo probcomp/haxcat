@@ -312,7 +312,8 @@ cc_insert_col_from_prior col_id d cc@Crosscat{..} = do
   view_id <- flipweights $ map swap prior_weights
   candidate_view <- view_empty new_crp row_ids
   let view = fromMaybe candidate_view $ M.lookup view_id cc_views
-      new_col = repartition (view_partition view) d $ Column per_column_hypers undefined
+      new_col = repartition (crp_seq_results $ view_partition view) d
+              $ Column per_column_hypers undefined
   return $ cc_col_reinc col_id new_col view_id view cc
   where
     new_crp = (CRP (ClusterID 0) per_view_alpha)

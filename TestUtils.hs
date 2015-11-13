@@ -95,10 +95,12 @@ instance StructureCheckable Crosscat where
           counts_agree = counts_agree_with_partition cc_counts cc_partition
           views_ok = map structure_test $ M.elems cc_views
           views_there = M.keys cc_views ~?= (uniq $ sort $ M.elems cc_partition)
-          same_rows = map sameRows $ map view_partition $ M.elems cc_views
+          same_rows = map sameRows $ map (crp_seq_results . view_partition)
+                      $ M.elems cc_views
           right_columns = map rightColumns $ groupBy ((==) `on` snd)
                           $ sortOn snd $ M.toAscList cc_partition
-          one_partition = view_partition $ head $ M.elems cc_views
+          one_partition = crp_seq_results $ view_partition $ head
+                          $ M.elems cc_views
           sameRows m = M.keys m ~?= M.keys one_partition
           rightColumns :: [(ColID, ViewID)] -> Test
           rightColumns cols =
