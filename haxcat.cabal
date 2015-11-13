@@ -16,7 +16,7 @@ build-type:            Simple
 cabal-version:         >=1.10
 
 library
-  exposed-modules:     Haxcat
+  exposed-modules:     Haxcat, Predictive
   build-depends:       base >=4.6 && <4.9, random-fu, containers,
                        math-functions, mtl, rvar,
                        log-domain, vector
