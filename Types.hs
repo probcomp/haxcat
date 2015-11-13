@@ -128,6 +128,9 @@ crp_seq_empty crp keys = do
   (partition, counts) <- crp_sample_partition empty crp keys
   return $ CRPSequence crp counts partition
 
+crp_seq_weights :: (Ord v, Enum v) => CRPSequence k v -> [(Double, v)]
+crp_seq_weights CRPSequence{..} = crp_weights crp_seq_counts crp_seq_crp
+
 -- Note: As written here, Crosscat will not end up being a very nice
 -- CRP mixture of CRP mixtures, because either
 -- - the inner mixtures would correspond to views, and so would need
