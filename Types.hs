@@ -234,20 +234,28 @@ view_row_only_uninc r_id (Row _ cell) View{..} =
 view_row_uninc :: RowID -> Row -> View -> View
 view_row_uninc r_id r = view_cluster_uninc r_id . view_row_only_uninc r_id r
 
+view_cluster_reinc :: RowID -> ClusterID -> View -> View
+view_cluster_reinc r_id cluster_id v@View{view_partition = vp} =
+    v{view_partition = vp'} where
+        vp' = crp_seq_reinc r_id cluster_id vp
+
 -- Treats extra columns in the Row correctly, namely by ignoring them.
 -- TODO Tweak to ignore missing columns in the Row also (at fromJust)
 -- TODO For possible uncollapsed columns, should probably accept a
 -- candidate new cluster.
-view_row_reinc :: RowID -> Row -> ClusterID -> View -> View
-view_row_reinc r_id (Row _ cell) cluster_id View{..} =
-    View view_partition' view_columns' where
-      view_partition' = crp_seq_reinc r_id cluster_id view_partition
+view_row_only_reinc :: Row -> ClusterID -> View -> View
+view_row_only_reinc (Row _ cell) cluster_id View{..} =
+    View view_partition view_columns' where
       view_columns' = M.mapWithKey col_reinc view_columns
       col_reinc :: ColID -> Column -> Column
       col_reinc col_id (Column h m) = Column h (M.alter add_datum cluster_id m)
           where -- add_datum :: Maybe stats -> Maybe stats
                 add_datum stats = Just $ insert item $ fromMaybe empty stats
                 item = fromJust $ cell col_id
+
+view_row_reinc :: RowID -> Row -> ClusterID -> View -> View
+view_row_reinc r_id row c_id =
+    view_row_only_reinc row c_id . view_cluster_reinc r_id c_id
 
 view_nonempty :: View -> Maybe View
 view_nonempty v@View{view_columns = cs} | M.size cs == 0 = Nothing
