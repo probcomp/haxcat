@@ -108,17 +108,19 @@ Things to do (+ bullet means "done"):
     - define crp_mixture_{{re,un}inc,sample} etc
   + Derive Eq and make the bogo test structural
   + See whether I can pull the same thing from Crosscat
-  - Split "view unincorporation" into removing the datum (leaving a
+  + Split "view unincorporation" into removing the datum (leaving a
     "crp mixture predict") and removing the latent also (which is what
     the current thing does)
-    - Names: view_{cluster,row,}_{sample,predict}
-      view_{cluster,col,row,row_only}_{re,un}inc
-  - Define "cc row unincorporation", with the same split
+    - Names: view_{cluster,col,row,row_only}_{re,un}inc
+  + Define "cc row unincorporation", with the same split
+  - Split view sampling into components
+    - Names: view{_cluster,_row,}_sample
   - Add a map of incorporated rows to View (which will be static
     during inference sweeps, but used actively during Geweke testing)
   - Define _predict for CRPMixture, view, and crosscat-rowwise
     - I think I still need two names for the view and cc versions, to
       distinguish prediction to the datum or just the latent
+    - Names: view{_cluster,_row,}_predict
   - Should be able to make cc_empty with a row id list and a column id
     list, which can form the basis of a full-size Geweke test
   - Note: I can Geweke test the NIGNormal code separately, on one

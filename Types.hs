@@ -253,6 +253,10 @@ view_row_only_reinc (Row _ cell) cluster_id View{..} =
                 add_datum stats = Just $ insert item $ fromMaybe empty stats
                 item = fromJust $ cell col_id
 
+view_row_only_reinc' :: RowID -> Row -> View -> View
+view_row_only_reinc' r_id row v@View{..} = view_row_only_reinc row cluster_id v
+    where cluster_id = fromJust $ crp_seq_lookup r_id view_partition
+
 view_row_reinc :: RowID -> Row -> ClusterID -> View -> View
 view_row_reinc r_id row c_id =
     view_row_only_reinc row c_id . view_cluster_reinc r_id c_id
@@ -307,6 +311,14 @@ cc_col_reinc col_id col view_id view Crosscat{..} =
       cc_partition' = crp_seq_reinc col_id view_id cc_partition
       cc_views' = M.alter view_inc view_id cc_views
       view_inc maybe_view = Just $ view_col_reinc col_id col $ fromMaybe view maybe_view
+
+cc_row_only_uninc :: RowID -> Row -> Crosscat -> Crosscat
+cc_row_only_uninc r_id row cc@Crosscat{cc_views = vs} = cc{cc_views = vs'}
+    where vs' = M.map (view_row_only_uninc r_id row) vs
+
+cc_row_only_reinc :: RowID -> Row -> Crosscat -> Crosscat
+cc_row_only_reinc r_id row cc@Crosscat{cc_views = vs} = cc{cc_views = vs'}
+    where vs' = M.map (view_row_only_reinc' r_id row) vs
 
 ----------------------------------------------------------------------
 -- Initialization                                                   --
