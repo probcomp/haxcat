@@ -35,6 +35,11 @@ import RowSweep (view_weights)
 view_cluster_sample :: View -> RVar ClusterID
 view_cluster_sample View{..} = crp_seq_sample view_partition
 
+view_cluster_predict :: RowID -> View -> RVar (ClusterID, View)
+view_cluster_predict r_id view = do
+  (c_id, part') <- crp_seq_predict r_id $ view_partition view
+  return (c_id, view{view_partition = part'})
+
 column_sample :: ClusterID -> Column -> RVar Double
 column_sample c_id (Column hypers m) = sample_predictive stats hypers where
   stats = fromMaybe empty $ M.lookup c_id m
@@ -43,6 +48,15 @@ view_sample :: View -> RVar (M.Map ColID Double)
 view_sample v@View{..} = do
   cluster_id <- view_cluster_sample v
   mapM (column_sample cluster_id) view_columns
+
+-- ASSUME The RowID is not incorporated into the suff stats (the
+-- partition is checked)
+view_predict :: RowID -> View -> RVar (M.Map ColID Double, View)
+view_predict r_id view = do
+  (c_id, view') <- view_cluster_predict r_id view
+  ans <- mapM (column_sample c_id) $ view_columns view'
+  let view'' = view_row_only_reinc (map_to_row ans) c_id view'
+  return (ans, view'')
 
 cc_sample :: Crosscat -> RVar Row
 cc_sample Crosscat{..} = liftM (map_to_row . M.foldl' M.union M.empty) per_view where

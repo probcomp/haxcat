@@ -117,10 +117,18 @@ Things to do (+ bullet means "done"):
     - Names: view{_cluster,_row,}_sample
   - Add a map of incorporated rows to View (which will be static
     during inference sweeps, but used actively during Geweke testing)
+    - Consequence: uninc wouldn't need to accept the Row
+    - Funny consequence: inference wouldn't need to accept the dataset
+      - To actually do that, would need to reconstruct the column data
+        during column sweeps, or keep a redundant view of it
+      - May be paying with extra map lookups if I do that
   - Define _predict for CRPMixture, view, and crosscat-rowwise
     - I think I still need two names for the view and cc versions, to
       distinguish prediction to the datum or just the latent
     - Names: view{_cluster,_row,}_predict
+    - The assumption-free version of view predict would need to read
+      the dataset in order to repeat previously predicted items (but,
+      interestingly, not to incorporate)
   - Should be able to make cc_empty with a row id list and a column id
     list, which can form the basis of a full-size Geweke test
   - Note: I can Geweke test the NIGNormal code separately, on one

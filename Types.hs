@@ -138,6 +138,16 @@ crp_seq_weights CRPSequence{..} = crp_weights crp_seq_counts crp_seq_crp
 crp_seq_sample :: (Ord v, Enum v) => CRPSequence k v -> RVar v
 crp_seq_sample CRPSequence{..} = sample_predictive crp_seq_counts crp_seq_crp
 
+crp_seq_predict :: (Ord k, Ord v, Enum v) =>
+                   k -> CRPSequence k v -> RVar (v, CRPSequence k v)
+crp_seq_predict key seq =
+    case crp_seq_lookup key seq of
+      (Just val) -> return (val, seq)
+      Nothing -> do
+        val <- crp_seq_sample seq
+        let seq' = crp_seq_reinc key val seq
+        return (val, seq')
+
 -- Note: As written here, Crosscat will not end up being a very nice
 -- CRP mixture of CRP mixtures, because either
 -- - the inner mixtures would correspond to views, and so would need
