@@ -48,13 +48,26 @@ Things to do (+ bullet means "done"):
     explicitly return -infinity, although I don't know how to express
     that in Haskell."
     - I think Haskell's arithmetic will just do the right thing
-  - Taylor says "For NIGNormal pdf, I think you can write this: pdf m
+  + Taylor says "For NIGNormal pdf, I think you can write this: pdf m
     x = pdf_predictive empty m x.  In fact, that should just be called
     compound_pdf"
   - Could migrate the Map ColID Column out to the Crosscat object.
     Then each View is more clearly just the set of applications of a
     crp (mapping rows to clusters); and I may be able to reuse that
     object in the relevant part of crosscat too.
+    - define a cc_row_{un,re}inc for updating the suff stats
+      - reinc needs all the per-view cluster ids
+    - change view_row_step to accept the column map (including a spec
+      of which columns are relevant to this view!) and return the new
+      ClusterID
+    - change RowSweep to define cc_row_step, which
+      - unincorporates from the cc-wide suff stats
+      - runs the view_row_steps
+      - reincorporates with the new cluster ids
+  - Might be better to introduce a new object, e.g. CRPMixture, which
+    just knows the CRP, counts, and partition, and split View into a
+    CRPMixture and the current column map.
+    - Then Crosscat becomes a CRPMixture and the cc_views thing
 - Benefit: profile inference
   - cabal configure --enable-executable-profiling
   - cabal build bench-infer && time dist/build/bench-infer/bench-infer +RTS -p -hc
@@ -73,6 +86,41 @@ Things to do (+ bullet means "done"):
   - Explicitly unboxing the vectors that hold the data set helps
     persistent memory use some, and drastically reduces the number D#
     constructors being retained
+- For simulation, would want:
+  - view_cluster_predict :: RowID -> View -> RVar (ClusterID, View)
+       which is a view_cluster_sample and a view_cluster_reinc if the
+       row id is fresh, or produces the old value if it is stale
+  - view_predict :: RowID -> View -> RVar (M.Map ColID Double, View)
+    which does a view_sample and a view_reinc if the row id is fresh
+    (and does what if it is stale? can't return the current value without
+    access to the dataset, which the view doesn't actually store)
+  - I also have the problem that I may want to have partially
+    incorporated views: ones whose partition is present and
+    incorporated, but whose component suff stats are not.  Prediction
+    is well-defined in this case: use the existing cluster assignment,
+    make up an end value, and incorporate it into the suffstats.  The
+    trouble is detecting this state; for which I seem to want to give
+    views read access to the set of actual data items that have been
+    incorporated (as a Map RowID Row, presumably)
+- Plan of attack:
+  - Pull out CRPMixture or something from View, leaving that and the
+    column map
+    - define crp_mixture_{{re,un}inc,sample} etc
+  - See whether I can pull the same thing from Crosscat
+  - Split "view unincorporation" into removing the datum (leaving a
+    "crp mixture predict") and removing the latent also (which is what
+    the current thing does)
+    - I don't like the nomenclature implications
+  - Define "cc row unincorporation", with the same split
+  - Add a map of incorporated rows to View (which will be static
+    during inference sweeps, but used actively during Geweke testing)
+  - Define _predict for CRPMixture, view, and crosscat-rowwise
+    - I think I still need two names for the view and cc versions, to
+      distinguish prediction to the datum or just the latent
+  - Should be able to make cc_empty with a row id list and a column id
+    list, which can form the basis of a full-size Geweke test
+  - Note: I can Geweke test the NIGNormal code separately, on one
+    instance.
 - Benefit: geweke test 1 x m
   - Only tests the NIG Normal code
   - geweke runner ought to have type
