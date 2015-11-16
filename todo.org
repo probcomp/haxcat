@@ -114,7 +114,7 @@ Things to do (+ bullet means "done"):
   which I seem to want to give views read access to the set of actual
   data items that have been incorporated (as a Map RowID Row,
   presumably)
-- Plan of attack:
++ Plan of attack:
   + Pull out CRPMixture or something from View, leaving that and the
     column map
     - define crp_mixture_{{re,un}inc,sample} etc
@@ -132,24 +132,16 @@ Things to do (+ bullet means "done"):
       interestingly, not to incorporate)
   + Should be able to make cc_empty with a row id list and a column id
     list, which can form the basis of a full-size Geweke test
-  - Note: I can Geweke test the NIGNormal code separately, on one
-    instance.
-- Benefit: geweke test 1 x m
-  - Only tests the NIG Normal code
+- Note: I can Geweke test the NIGNormal code separately, on one
+  instance.
++ Need to incorporate and unincorporate generated data
+- Is there any kind of test that would detect the bug of forgetting to do that?
+- Benefit: geweke test n x m
   - geweke runner ought to have type
     RVar a -> (a -> RVar b) -> (b -> a -> RVar a) -> (a -> b -> Probe) -> Results
     except somebody needs to deal with unincorporating and
     reincorporating any collapsed models in a that depend on the data b
     - Can I make the transition operator do that?
-    - Can I get a version of Crosscat uninc that will conserve the
-      partitions while removing the data, for simulating new data
-      conditioned on the partition?
-    - This is sensible, because the cluster stats are the only things
-      in the thing that depend on the content rather than the shape of
-      the data.
-    - Possible kludge: define an "all-empty simulate" that only reads
-      the partitions and hyper parameters (and any uncollapsed cluster
-      parameters, when that starts happening)
 - Benefit: asymptotic consistency test
   - Generically, can measure approximation of the predictive
     distribution
@@ -157,8 +149,7 @@ Things to do (+ bullet means "done"):
     latent structure
 + Draft predictive simulation
 + Draft predictive pdf
-- Draft multi-row joint simulation
-- Benefit: geweke test n x m
++ Draft multi-row joint simulation
 - Is there a notion of asymptotic consistency with a joint multi-row
   generator?
   - Are such things ever in the hypothesis space?
