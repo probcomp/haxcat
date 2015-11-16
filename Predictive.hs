@@ -82,3 +82,10 @@ cc_pdf_predictive Crosscat{..} row =
     -- because view_predictive ignores extra columns (which maybe it
     -- shouldn't?)
     product $ map (flip view_pdf_predictive row) $ M.elems cc_views
+
+cc_predict_full :: [ColID] -> [RowID] -> RVar Crosscat
+cc_predict_full cols rows = do
+  partition <- crp_seq_empty (CRP (ViewID 0) cc_alpha) cols
+  views <- mapM mk_view $ crp_seq_values partition
+  return $ Crosscat partition $ M.fromList $ zip (crp_seq_values partition) views
+    where mk_view _ = view_empty (CRP (ClusterID 0) per_view_alpha) rows

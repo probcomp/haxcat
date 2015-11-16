@@ -148,6 +148,9 @@ crp_seq_predict key seq =
         let seq' = crp_seq_reinc key val seq
         return (val, seq')
 
+crp_seq_values :: CRPSequence k v -> [v]
+crp_seq_values = M.elems . crp_seq_results
+
 -- Note: As written here, Crosscat will not end up being a very nice
 -- CRP mixture of CRP mixtures, because either
 -- - the inner mixtures would correspond to views, and so would need
