@@ -22,7 +22,8 @@ import Prelude hiding (mapM)
 
 import Control.Monad (foldM, liftM)
 import qualified Data.Map as M
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust, fromMaybe)
+import qualified Data.Set as S
 import Data.Traversable (mapM)
 import qualified Data.Vector as V
 
@@ -78,3 +79,12 @@ column_major_to_row_major ds | M.null ds = []
     lookup_fun :: RowID -> (RowID, Row)
     lookup_fun r_id@(RowID idx) =
         (r_id, Row keys (\col_id -> liftM (V.! idx) $ M.lookup col_id ds))
+
+row_major_to_column_major :: [Row] -> M.Map ColID (ColumnData Double)
+row_major_to_column_major [] = M.empty
+row_major_to_column_major rows@((Row keys _):_) = M.fromList $ zip keys_l data_l
+    where
+      keys_l = S.toList keys
+      data_l = map column keys_l
+      column col_id = V.fromList $ map item rows where
+          item (Row _ cell) = fromJust $ cell col_id
