@@ -30,10 +30,10 @@ import ColumnSweep
 modifyT :: (Monad m) => (a -> m a) -> StateT a m ()
 modifyT f = StateT $ liftM ((),) . f
 
+infer :: M.Map ColID (ColumnData Double) -> StateT Crosscat RVar ()
+infer ds = do
+  modifyT (col_sweep ds)
+  modifyT (row_sweep2 ds)
+
 train :: M.Map ColID (ColumnData Double) -> Int -> RVar Crosscat
-train ds k = cc_initialize ds >>= execStateT (replicateM k act) where
-    act :: StateT Crosscat RVar ()
-    act = do
-      modifyT (col_sweep ds)
-      modifyT (row_sweep2 ds)
-      
+train ds k = cc_initialize ds >>= execStateT (replicateM k (infer ds)) where

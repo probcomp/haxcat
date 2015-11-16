@@ -130,7 +130,7 @@ Things to do (+ bullet means "done"):
     - The assumption-free version of view predict would need to read
       the dataset in order to repeat previously predicted items (but,
       interestingly, not to incorporate)
-  - Should be able to make cc_empty with a row id list and a column id
+  + Should be able to make cc_empty with a row id list and a column id
     list, which can form the basis of a full-size Geweke test
   - Note: I can Geweke test the NIGNormal code separately, on one
     instance.
