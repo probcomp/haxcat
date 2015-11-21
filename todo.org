@@ -77,7 +77,7 @@ Things to do (+ bullet means "done"):
     - May be paying with extra map lookups if I do this
   - Could split view sampling into components
     - Names: view{_cluster,_row,}_sample
-- I am somewhat confused about sampling.
+- I am somewhat confused about sampling vs prediction.
   - I can always define sample as evalState predict (that is, throw
     away the incorporation)
   - The laziness might even be smart enough to avoid the extra work
@@ -96,7 +96,7 @@ Things to do (+ bullet means "done"):
       pdf_marginal.niglognorm                 Models    13.5    3.4
       pdf_marginal                            Models     9.5    1.7
   - Persistent memory usage is good: 400k
-    - But, around 100k of it is unboxed doubles?
+    - But, around 100k of it is boxed doubles?
     - another around 100k is interior nodes of Data.Maps
   - Probably some numeric code didn't get unboxed properly
   - Strictifying (and presumably therefore unboxing) the fields of
@@ -135,7 +135,12 @@ Things to do (+ bullet means "done"):
 - Note: I can Geweke test the NIGNormal code separately, on one
   instance.
 + Need to incorporate and unincorporate generated data
-- Is there any kind of test that would detect the bug of forgetting to do that?
+- Is there any kind of test that would detect the bug of forgetting to incorporate?
+- I really should modify geweke to report the generated data as well
+  - And confirm that it changes if I change whether the transition operator incorporates
+- A test for NIG Normal: For all parameter values and all run lengths, it induces
+  the same distribution as the uncollapsed version.
+  - What exactly does this exercise?
 - Benefit: geweke test n x m
   - geweke runner ought to have type
     RVar a -> (a -> RVar b) -> (b -> a -> RVar a) -> (a -> b -> Probe) -> Results
