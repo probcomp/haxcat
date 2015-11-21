@@ -160,6 +160,8 @@ Things to do (+ bullet means "done"):
     - people complain that K-S doesn't handle ties well (why not?
       just an implementation artifact, or does the statistic need to
       be adjusted?)
+  - I ought to unit-test my chi^2 test implementation (possibly to
+    assess its strength also)
 - Benefit: asymptotic consistency test
   - Generically, can measure approximation of the predictive
     distribution
