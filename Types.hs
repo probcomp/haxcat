@@ -132,6 +132,9 @@ crp_seq_empty crp keys = do
 crp_seq_empty' :: (Ord v) => CRP v -> CRPSequence k v
 crp_seq_empty' crp = CRPSequence crp empty M.empty
 
+crp_seq_size :: CRPSequence k v -> Int
+crp_seq_size CRPSequence {crp_seq_counts = Counts {counts_map = m}} = M.size m
+
 crp_seq_weights :: (Ord v, Enum v) => CRPSequence k v -> [(Double, v)]
 crp_seq_weights CRPSequence{..} = crp_weights crp_seq_counts crp_seq_crp
 

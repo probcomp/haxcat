@@ -14,9 +14,13 @@
 --   See the License for the specific language governing permissions and
 --   limitations under the License.
 
+{-# LANGUAGE RecordWildCards #-}
+
 module GewekeTest where
 
 import Control.Monad.State.Lazy
+import qualified Data.Map as M
+import Data.Maybe (fromJust)
 import Data.Random
 
 import Types
@@ -51,3 +55,11 @@ cc_geweke_chain rows cols probe k = instrumented_chain init step probe k where
       mapM_ (modifyT . (return .) . uncurry cc_row_only_reinc) row_data
       infer $ row_major_to_column_major d
       mapM_ (modifyT . (return .) . uncurry cc_row_only_uninc) row_data
+
+view_count :: Crosscat -> Int
+view_count Crosscat{..} = crp_seq_size cc_partition
+
+column_cluster_count :: ColID -> Crosscat -> Int
+column_cluster_count c_id Crosscat{..} = crp_seq_size view_partition where
+    v_id = fromJust $ crp_seq_lookup c_id cc_partition
+    View{..} = fromJust $ M.lookup v_id cc_views
