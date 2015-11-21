@@ -104,7 +104,7 @@ bogo_cc_expect = Crosscat
       }
 
 bogo_cc_row :: (Crosscat, Row)
-bogo_cc_row = evalState (sampleRVar bogogen) (mkStdGen 0)
+bogo_cc_row = fixed 0 bogogen
 
 bogo_cc :: Crosscat
 bogo_cc = fst bogo_cc_row
@@ -115,9 +115,6 @@ bogo_row = snd bogo_cc_row
 geweke_gen :: RVar [Crosscat]
 geweke_gen = cc_geweke_chain_instrumented
              [RowID 0, RowID 1] [ColID 0, ColID 1] id 3
-
-geweke_ccs :: [Crosscat]
-geweke_ccs = evalState (sampleRVar geweke_gen) (mkStdGen 0)
 
 geweke_gen_2 :: RVar Crosscat
 geweke_gen_2 = cc_geweke_chain [RowID 0, RowID 1] [ColID 0, ColID 1] 5
@@ -141,7 +138,7 @@ tests = test [ bogo_cc ~?= bogo_cc_expect
                                                   , (ColID 1,0.5917825321828307)
                                                   , (ColID 2,-1.3079604690745894)]
              , cc_pdf_predictive bogo_cc bogo_row ~?= 4.49559045282294e-4
-             , show geweke_ccs ~?= "[Crosscat {cc_partition = CRPSequence {crp_seq_crp = CRP (V 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(V 0,2)], counts_total = 2}, crp_seq_results = fromList [(Co 0,V 0),(Co 1,V 0)]}, cc_views = fromList [(V 0,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 0,2)], counts_total = 2}, crp_seq_results = fromList [(R 0,Cl 0),(R 1,Cl 0)]}, view_columns = fromList []})]},Crosscat {cc_partition = CRPSequence {crp_seq_crp = CRP (V 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(V 0,2)], counts_total = 2}, crp_seq_results = fromList [(Co 0,V 0),(Co 1,V 0)]}, cc_views = fromList [(V 0,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 0,2)], counts_total = 2}, crp_seq_results = fromList [(R 0,Cl 0),(R 1,Cl 0)]}, view_columns = fromList []})]},Crosscat {cc_partition = CRPSequence {crp_seq_crp = CRP (V 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(V 0,2)], counts_total = 2}, crp_seq_results = fromList [(Co 0,V 0),(Co 1,V 0)]}, cc_views = fromList [(V 0,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 0,2)], counts_total = 2}, crp_seq_results = fromList [(R 0,Cl 0),(R 1,Cl 0)]}, view_columns = fromList []})]}]"
+             , show (fixed 0 geweke_gen) ~?= "[Crosscat {cc_partition = CRPSequence {crp_seq_crp = CRP (V 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(V 0,2)], counts_total = 2}, crp_seq_results = fromList [(Co 0,V 0),(Co 1,V 0)]}, cc_views = fromList [(V 0,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 0,2)], counts_total = 2}, crp_seq_results = fromList [(R 0,Cl 0),(R 1,Cl 0)]}, view_columns = fromList []})]},Crosscat {cc_partition = CRPSequence {crp_seq_crp = CRP (V 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(V 0,2)], counts_total = 2}, crp_seq_results = fromList [(Co 0,V 0),(Co 1,V 0)]}, cc_views = fromList [(V 0,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 0,2)], counts_total = 2}, crp_seq_results = fromList [(R 0,Cl 0),(R 1,Cl 0)]}, view_columns = fromList []})]},Crosscat {cc_partition = CRPSequence {crp_seq_crp = CRP (V 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(V 0,2)], counts_total = 2}, crp_seq_results = fromList [(Co 0,V 0),(Co 1,V 0)]}, cc_views = fromList [(V 0,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 0,2)], counts_total = 2}, crp_seq_results = fromList [(R 0,Cl 0),(R 1,Cl 0)]}, view_columns = fromList []})]}]"
              , True ~?= 0.1 < fixed 0 agreement
              ]
 
