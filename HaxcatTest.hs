@@ -109,10 +109,14 @@ bogo_row :: Row
 bogo_row = snd bogo_cc_row
 
 geweke_gen :: RVar [Crosscat]
-geweke_gen = cc_geweke_chain [RowID 0, RowID 1] [ColID 0, ColID 1] id 3
+geweke_gen = cc_geweke_chain_instrumented
+             [RowID 0, RowID 1] [ColID 0, ColID 1] id 3
 
 geweke_ccs :: [Crosscat]
 geweke_ccs = evalState (sampleRVar geweke_gen) (mkStdGen 0)
+
+geweke_gen_2 :: RVar Crosscat
+geweke_gen_2 = cc_geweke_chain [RowID 0, RowID 1] [ColID 0, ColID 1] 3
 
 -- Basically just checking that it runs (and is deterministic for
 -- fixed seed); the actual values here do not represent the result of

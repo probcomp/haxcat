@@ -33,6 +33,10 @@ geweke_transition mk_data trans init = do
   d <- mk_data init
   trans d init
 
+chain :: (Monad m) => m a -> (a -> m a) -> Int -> m a
+chain init _ 0 = init
+chain init step k = chain (init >>= step) step (k-1)
+
 -- Can I do better than this with an appropriate random stream abstraction?
 instrumented_chain :: RVar a -> (a -> RVar a) -> (a -> b) -> Int -> RVar [b]
 instrumented_chain _ _ _ 0 = return []
@@ -45,16 +49,27 @@ cc_sample_many :: [RowID] -> Crosscat -> RVar [Row]
 cc_sample_many rows cc = evalStateT act cc where
     act = mapM (\r_id -> StateT $ cc_predict r_id) rows
 
-cc_geweke_chain :: [RowID] -> [ColID] -> (Crosscat -> a) -> Int -> RVar [a]
-cc_geweke_chain rows cols probe k = instrumented_chain init step probe k where
+cc_geweke_chain :: [RowID] -> [ColID] -> Int -> RVar Crosscat
+cc_geweke_chain rows cols k = chain init step k where
     init = cc_predict_full cols rows
-    step = geweke_transition (cc_sample_many rows) $ \d -> execStateT $ step_act d
-    step_act :: [Row] -> StateT Crosscat RVar ()
-    step_act d = do
-      let row_data = zip rows d
-      mapM_ (modifyT . (return .) . uncurry cc_row_only_reinc) row_data
-      infer $ row_major_to_column_major d
-      mapM_ (modifyT . (return .) . uncurry cc_row_only_uninc) row_data
+    step = (cc_geweke_step rows)
+
+cc_geweke_chain_instrumented ::
+  [RowID] -> [ColID] -> (Crosscat -> a) -> Int -> RVar [a]
+cc_geweke_chain_instrumented rows cols probe k =
+  instrumented_chain init (cc_geweke_step rows) probe k where
+    init = cc_predict_full cols rows
+
+cc_geweke_step :: [RowID] -> Crosscat -> RVar Crosscat
+cc_geweke_step rows = geweke_transition (cc_sample_many rows)
+                      $ \d -> execStateT $ cc_geweke_step_act rows d
+
+cc_geweke_step_act :: [RowID] -> [Row] -> StateT Crosscat RVar ()
+cc_geweke_step_act rows d = do
+  let row_data = zip rows d
+  mapM_ (modifyT . (return .) . uncurry cc_row_only_reinc) row_data
+  infer $ row_major_to_column_major d
+  mapM_ (modifyT . (return .) . uncurry cc_row_only_uninc) row_data
 
 view_count :: Crosscat -> Int
 view_count Crosscat{..} = crp_seq_size cc_partition
