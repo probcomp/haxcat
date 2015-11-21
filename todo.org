@@ -147,6 +147,19 @@ Things to do (+ bullet means "done"):
     except somebody needs to deal with unincorporating and
     reincorporating any collapsed models in a that depend on the data b
     - Can I make the transition operator do that?
+  - Problems with chi2 testing:
+    - the test in the statistics package doesn't return the p value
+      (wtf?), so I probably need to roll my own
+    - the random-fu package has no test, and also has no room for
+      survivor functions rather than cdfs in its typeclasses (?)
+      - could do it with the plain cdf, I suppose :(
+  - Could also do K-S with respect to the Ord instance (which is more sensitive?)
+    - James Cook wrote a KS test over his random-fu package
+      - But only the one-sided version
+    - statistics has the necessary pieces
+    - people complain that K-S doesn't handle ties well (why not?
+      just an implementation artifact, or does the statistic need to
+      be adjusted?)
 - Benefit: asymptotic consistency test
   - Generically, can measure approximation of the predictive
     distribution
