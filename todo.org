@@ -1,8 +1,5 @@
 Things to do (+ bullet means "done"):
 + Implement the class hierarchy refactoring that Taylor suggested
-- Write a 1-D pdf-sampler agreement test and apply it to
-  - various components with various stats
-  - a mixture with a fixed assignment
 + See whether Taylor's View proposal leads to a Crosscat type I believe
 + Fill in easy undefined bits for a full col_step
 + Fill in sampling a view from the view prior 
@@ -16,79 +13,24 @@ Things to do (+ bullet means "done"):
     cabal configure --enable-executable-profiling
     cabal build && dist/build/test-smoke/test-smoke +RTS -xc
 + Benefit: benchmark inference vs crosscat on ridiculous data
-  - train (bogodata 1167 23) 1500 takes about 10 minutes
-    - around 3x faster than crosscat
-  - train (bogodata2 1167 23) 15 takes about 1 minute
-    - around 3x slower than crosscat (but tons of clusters -- too many?)
-  - crosscat suffers from multinomials in satellites, so perhaps this
-    comparison is a little unfair.
-  - flushing empty clusters seemed to help, but across-seed
-    variability is high
-- "Crash" testing:
++ "Crash" testing:
   + Fix the random seed in HaxcatTest and compare to known string
   + Convert TestSmoke.hs into a cabalized benchmark executable
   + Write code checking structural invariants
-  - could write a test suite that generates some data and runs
-    inference a while, checking that invariants are preserved.
-    - quickcheck over the parameters?
   + Exercise prediction and assessment (e.g., it executes)
-- "Crash" fixes:
-  - when gauss_n is zero I get NaN stats :(
++ "Crash" fixes:
   + Flush empty clusters
-- Refactorings:
++ Refactorings:
   + Flush NoStat?
   + Can I get rid of zipWithHoles via mergeWithKey?
   + Define more compact Show instances for newtypes of ints: Ro, Co, Cl, Vw
-  - Taylor says "CRP pdf_predictive should perhaps be rewritten in
-    terms of bernoulli_weight [or multinomial]".
-  - Taylor says "it occurred to me that bernoulli_weight ought to have
-    an explicit test for zero alpha, in which case it should
-    explicitly return -infinity, although I don't know how to express
-    that in Haskell."
-    - I think Haskell's arithmetic will just do the right thing
   + Taylor says "For NIGNormal pdf, I think you can write this: pdf m
     x = pdf_predictive empty m x.  In fact, that should just be called
     compound_pdf"
   + Introduce a new object, e.g. CRPMixture, which just knows the CRP,
     counts, and partition, and split View into a CRPMixture and the
     current column map.
-    - Then Crosscat becomes a CRPMixture and the cc_views thing
-  - Could add a map of incorporated rows to View (which will be static
-    during inference sweeps, but used actively during Geweke testing)
-    - Consequence: uninc wouldn't need to accept the Row
-    - Funny consequence: inference wouldn't need to accept the dataset
-      - To actually do that, would need to reconstruct the column data
-        during column sweeps, or keep a redundant view of it
-    - May be paying with extra map lookups if I do this
-- I am somewhat confused about sampling vs prediction.
-  - I can always define sample as evalState predict (that is, throw
-    away the incorporation)
-  - The laziness might even be smart enough to avoid the extra work
-  - But, the sample methods I have don't even take a row id, and
-    assume it's always a fresh row
-  - I should also be able to define predict as sample+incorporate
-    - May tweak sampling to take the row id and check whether it was
-      already present
-    - Current incorporate assumes the incorporee is fresh, but could
-      make a version that checks
-- Benefit: profile inference
-  - cabal configure --enable-executable-profiling
-  - cabal build bench-infer && time dist/build/bench-infer/bench-infer +RTS -p -hc
-  - Likely hotspots:
-      view_weights.likelihood.likelihood_one  RowSweep  18.3   20.2
-      pdf_marginal.niglognorm                 Models    13.5    3.4
-      pdf_marginal                            Models     9.5    1.7
-  - Persistent memory usage is good: 400k
-    - But, around 100k of it is boxed doubles?
-    - another around 100k is interior nodes of Data.Maps
-  - Probably some numeric code didn't get unboxed properly
-  - Strictifying (and presumably therefore unboxing) the fields of
-    GaussStats and NIGNormal reduces allocation by about a third,
-    doesn't seem to help overall speed, but seems to shift work into
-    the numerical computations
-  - Explicitly unboxing the vectors that hold the data set helps
-    persistent memory use some, and drastically reduces the number D#
-    constructors being retained
+    + Then Crosscat becomes a CRPMixture and the cc_views thing
 + Elaboration: I want to have partially incorporated views: ones whose
   partition is present and incorporated, but whose component suff
   stats are not.  Prediction is well-defined in this case: use the
@@ -100,31 +42,22 @@ Things to do (+ bullet means "done"):
 + Plan of attack:
   + Pull out CRPMixture or something from View, leaving that and the
     column map
-    - define crp_mixture_{{re,un}inc,sample} etc
+    + define crp_mixture_{{re,un}inc,sample} etc
   + Derive Eq and make the bogo test structural
   + See whether I can pull the same thing from Crosscat
   + Split "view unincorporation" into removing the datum (leaving a
     "crp mixture predict") and removing the latent also (which is what
     the current thing does)
-    - Names: view_{cluster,col,row,row_only}_{re,un}inc
+    + Names: view_{cluster,col,row,row_only}_{re,un}inc
   + Define "cc row unincorporation", with the same split
   + Define _predict for CRPMixture, view, and crosscat-rowwise
-    - Names: view{_cluster,_row,}_predict
+    + Names: view{_cluster,_row,}_predict
     - The assumption-free version of view predict would need to read
       the dataset in order to repeat previously predicted items (but,
       interestingly, not to incorporate)
   + Should be able to make cc_empty with a row id list and a column id
     list, which can form the basis of a full-size Geweke test
-- Note: I can Geweke test the NIGNormal code separately, on one
-  instance.
-- Another test for NIG Normal: For all parameter values and all run
-  lengths, it induces the same distribution as the uncollapsed
-  version.
-  - Venture implements this test, and two further variants
 + Need to incorporate and unincorporate generated data
-- Is there any kind of test that would detect the bug of forgetting to incorporate?
-- I really should modify geweke to report the generated data as well
-  - And confirm that it changes if I change whether the transition operator incorporates
 + Benefit: geweke test n x m
   + geweke runner ought to have type
     RVar a -> (a -> RVar b) -> (b -> a -> RVar a) -> (a -> b -> Probe) -> Results
@@ -137,30 +70,6 @@ Things to do (+ bullet means "done"):
     + the random-fu package has no test, and also has no room for
       survivor functions rather than cdfs in its typeclasses (?)
       - could do it with the plain cdf, I suppose :(
-- Could run Geweke tests on the per-column cluster counts too
-- Could plot the results of Geweke testing for visual confirmation
-- Could also do K-S with respect to the Ord instance (would it be
-  more sensitive than chi^2?)
-  - James Cook wrote a KS test over his random-fu package
-    - But only the one-sided version
-  - statistics has the necessary pieces
-  - people complain that K-S doesn't handle ties well (why not?
-    just an implementation artifact, or does the statistic need to
-    be adjusted?)
-- I ought to unit-test my chi^2 test implementation (possibly to
-  assess its strength also)
-- Benefit: asymptotic consistency test
-  - Generically, can measure approximation of the predictive
-    distribution
-  - For in-class synthetic data can also measure convergence to the
-    latent structure
-  - Possible distributions/models to compare:
-    - One joint DPMM (with spherical components or a jointly Gaussian component)
-    - Per-column DPMMs
-    - Just a fat joint Gaussian
-    - Single per-column Gaussians with no clustering
-- Benefit: confirm better predictive accuracy on data synthesized from
-  Crosscat than the distractors would get.
 + Draft predictive simulation
 + Draft predictive pdf
 + Draft multi-row joint simulation
@@ -173,18 +82,45 @@ Things to do (+ bullet means "done"):
 - do the todos
 + Possible hack: if instead of a Map I represent a Row as a function
   ColID -> Maybe Double, then I think I can get really good data shape behavior
-  - for the output of view_sample and cc_sample to not lose information, this
+  + for the output of view_sample and cc_sample to not lose information, this
     rep would need to be traversable
-  - the mapZipWith in view_weights traverses the Row, but could be arranged to
-    only query (and even win performance if queries were O(1))
+
+I am somewhat confused about sampling vs prediction.
+- I can always define sample as evalState predict (that is, throw
+  away the incorporation)
+- The laziness might even be smart enough to avoid the extra work
+- But, the sample methods I have don't even take a row id, and
+  assume it's always a fresh row
+- I should also be able to define predict as sample+incorporate
+  - May tweak sampling to take the row id and check whether it was
+    already present
+  - Current incorporate assumes the incorporee is fresh, but could
+    make a version that checks
 
 Cleanup:
 - Rewrite DPMM in terms of the abstractions defined in Models; re-test it
   - Else flush (or delimit?) it; flush DPMM-specific Utils;
-- Generalize Test.hs to also test Haxcat
+- Generalize Test.hs to also test Haxcat?
 + Rename the cabal file to haxcat.cabal
 + Get permission from Baxter to relicense as Apache
   + Add copyright headers
+
+Refactorings:
+- When gauss_n is zero I get NaN stats :(
+- Taylor says "CRP pdf_predictive should perhaps be rewritten in
+  terms of bernoulli_weight [or multinomial]".
+- Taylor says "it occurred to me that bernoulli_weight ought to have
+  an explicit test for zero alpha, in which case it should
+  explicitly return -infinity, although I don't know how to express
+  that in Haskell."
+  - I think Haskell's arithmetic will just do the right thing
+- Could add a map of incorporated rows to View (which will be static
+  during inference sweeps, but used actively during Geweke testing)
+  - Consequence: uninc wouldn't need to accept the Row
+  - Funny consequence: inference wouldn't need to accept the dataset
+    - To actually do that, would need to reconstruct the column data
+      during column sweeps, or keep a redundant view of it
+  - May be paying with extra map lookups if I do this
 
 For feature parity:
 - Hyperparameter inference
@@ -211,10 +147,56 @@ For feature parity:
 - [with baxcat] flesh out component models
 - [with baxcat] support uncollapsed component models
 
-Future performance problems:
+For bug hunting:
+- Could write a test suite that generates some data and runs
+  inference a while, checking that invariants are preserved.
+  - quickcheck over the parameters?
+
+For gaining confidence in correctness (of parts):
+- Write a 1-D pdf-sampler agreement test and apply it to
+  - various components with various stats
+  - a mixture with a fixed assignment
+- Is there any kind of test that would detect the bug of forgetting to
+  incorporate, e.g. in the Geweke transition kernel?
+- I ought to unit-test my chi^2 test implementation (possibly to
+  assess its strength also)
+- Could also do K-S with respect to the Ord instance (would it be
+  more sensitive than chi^2?)
+  - James Cook wrote a KS test over his random-fu package
+    - But only the one-sided version
+  - statistics has the necessary pieces
+  - people complain that K-S doesn't handle ties well (why not?
+    just an implementation artifact, or does the statistic need to
+    be adjusted?)
+- Bayesian coherence testing (e.g., Geweke):
+  - Can Geweke test the NIGNormal code separately, on one instance.
+  - Another test for NIG Normal: For all parameter values and all run
+    lengths, it induces the same distribution as the uncollapsed
+    version.
+    - Venture implements this test, and two further variants
+  - I really should modify geweke to report the generated data as well
+    - And confirm that it changes if I change whether the transition operator incorporates
+  - Could run Geweke tests on the per-column cluster counts too
+  - Could plot the results of Geweke testing for visual confirmation
+- Asymptotic consistency test
+  - Generically, can measure approximation of the predictive
+    distribution
+  - For in-class synthetic data can also measure convergence to the
+    latent structure
+  - Possible distributions/models to compare:
+    - One joint DPMM (with spherical components or a jointly Gaussian component)
+    - Per-column DPMMs
+    - Just a fat joint Gaussian
+    - Single per-column Gaussians with no clustering
+- Confirm better predictive accuracy on data synthesized from Crosscat
+  than the distractors would get.
+
+Anticipated performance problems:
 + Cache the total in the crp counts object
 - Can I replace iterating over map keys and looking things up with
   iterating over the maps?
+- the mapZipWith in view_weights traverses the Row, but could be arranged to
+  only query (and even win performance if queries were O(1))
 - Am I computing column_full_p too many times?
 - Will it be important to store the data table in a flat 2D form
   rather than Map ColID (Vector Double)?
@@ -226,6 +208,35 @@ Future performance problems:
   - Shuffling columns is likely to be difficult to reconcile with
     making the representation strongly typed
     - An existential that holds a proxy describing the layout might work
+
+Performance notes
+- Benchmark results
+  - train (bogodata 1167 23) 1500 takes about 10 minutes
+    - around 3x faster than crosscat
+  - train (bogodata2 1167 23) 15 takes about 1 minute
+    - around 3x slower than crosscat (but tons of clusters -- too many?)
+  - crosscat suffers from multinomials in satellites, so perhaps this
+    comparison is a little unfair.
+  - flushing empty clusters seemed to help, but across-seed
+    variability is high
+- Profile instructions:
+  - cabal configure --enable-executable-profiling
+  - cabal build bench-infer && time dist/build/bench-infer/bench-infer +RTS -p -hc
+- Likely hotspots:
+    view_weights.likelihood.likelihood_one  RowSweep  18.3   20.2
+    pdf_marginal.niglognorm                 Models    13.5    3.4
+    pdf_marginal                            Models     9.5    1.7
+- Persistent memory usage is good: 400k
+  - But, around 100k of it is boxed doubles?
+  - another around 100k is interior nodes of Data.Maps
+- Probably some numeric code didn't get unboxed properly
+- Strictifying (and presumably therefore unboxing) the fields of
+  GaussStats and NIGNormal reduces allocation by about a third,
+  doesn't seem to help overall speed, but seems to shift work into
+  the numerical computations
+- Explicitly unboxing the vectors that hold the data set helps
+  persistent memory use some, and drastically reduces the number D#
+  constructors being retained
 
 Status of testing DPMM: I have a 4-parameter program that computes
 estimates of KL divergence.
