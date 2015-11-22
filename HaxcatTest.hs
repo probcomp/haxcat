@@ -33,6 +33,7 @@ import TestUtils
 import Predictive
 import GewekeTest
 import ChiSquare
+import Test
 
 sampleIO :: RVar a -> IO a
 sampleIO = sampleRVar
@@ -140,6 +141,10 @@ tests = test [ bogo_cc ~?= bogo_cc_expect
              , cc_pdf_predictive bogo_cc bogo_row ~?= 4.49559045282294e-4
              , show (fixed 0 geweke_gen) ~?= "[Crosscat {cc_partition = CRPSequence {crp_seq_crp = CRP (V 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(V 0,2)], counts_total = 2}, crp_seq_results = fromList [(Co 0,V 0),(Co 1,V 0)]}, cc_views = fromList [(V 0,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 0,2)], counts_total = 2}, crp_seq_results = fromList [(R 0,Cl 0),(R 1,Cl 0)]}, view_columns = fromList []})]},Crosscat {cc_partition = CRPSequence {crp_seq_crp = CRP (V 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(V 0,2)], counts_total = 2}, crp_seq_results = fromList [(Co 0,V 0),(Co 1,V 0)]}, cc_views = fromList [(V 0,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 0,2)], counts_total = 2}, crp_seq_results = fromList [(R 0,Cl 0),(R 1,Cl 0)]}, view_columns = fromList []})]},Crosscat {cc_partition = CRPSequence {crp_seq_crp = CRP (V 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(V 0,2)], counts_total = 2}, crp_seq_results = fromList [(Co 0,V 0),(Co 1,V 0)]}, cc_views = fromList [(V 0,View {view_partition = CRPSequence {crp_seq_crp = CRP (Cl 0) 1.0, crp_seq_counts = Counts {counts_map = fromList [(Cl 0,2)], counts_total = 2}, crp_seq_results = fromList [(R 0,Cl 0),(R 1,Cl 0)]}, view_columns = fromList []})]}]"
              , True ~?= 0.1 < fixed 0 agreement
+             , 1.7743516890627846e-4 ~?=
+               (fixed 0 $ estimate_KL_ta two_modes two_modes_ta 300 600)
+             , 0.11991536533960616 ~?=
+               (fixed 0 $ measure_dpmm_kl two_modes 300 20 10 500)
              ]
 
 main :: IO ()

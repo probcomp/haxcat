@@ -18,9 +18,7 @@ module Test where
 
 import Data.RVar (sampleRVar)
 import Data.Random
-import Data.Random.RVar
 import Data.Random.Distribution.Bernoulli
-import Data.Random.Distribution.Normal
 import Control.Monad
 
 import Utils
@@ -71,8 +69,6 @@ estimate_KL_ta from to latents_ct sample_ct = do
   density <- approximately_assess latents_ct to
   estimate_KL from density sample_ct
 
--- sampleIO $ estimate_KL_ta two_modes two_modes_ta 1000 2000 is ~5e-5
-
 dpmm_dist :: DPMM -> Assessable Double
 dpmm_dist dpmm = (return $ error "What?", predictive_logdensity dpmm)
 
@@ -86,5 +82,3 @@ measure_dpmm_kl data_gen train_data_ct iter_ct chain_ct test_ct = do
 
 sampleIO :: RVar a -> IO a
 sampleIO = sampleRVar
-
--- e.g. sampleIO $ measure_dpmm_kl two_modes 1000 20 10 500 is ~1-9e-2
