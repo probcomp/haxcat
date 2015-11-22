@@ -35,6 +35,10 @@ import Numeric.SpecFunctions (logGamma)
 import Utils (choose, log_domain)
 import qualified Utils as U
 
+----------------------------------------------------------------------
+-- Classes                                                          --
+----------------------------------------------------------------------
+
 type PDF elt = elt -> Log Double
 
 class Model m elt | m -> elt where
@@ -89,6 +93,9 @@ conjugate_sample_predictive :: (ConjugateModel m stat elt)
 conjugate_sample_predictive suffstats model =
     sample (update suffstats model)
 
+----------------------------------------------------------------------
+-- Beta Bernoulli                                                   --
+----------------------------------------------------------------------
 
 newtype TFCount = TFC (Int, Int)
 instance Statistic TFCount Bool where
@@ -114,6 +121,10 @@ instance CompoundModel BetaBernoulli TFCount Bool where
 instance ConjugateModel BetaBernoulli TFCount Bool where
     update (TFC (t, f)) (BBM (alpha, beta)) =
         (BBM (alpha + fromIntegral t, beta + fromIntegral f))
+
+----------------------------------------------------------------------
+-- NIG Normal                                                       --
+----------------------------------------------------------------------
 
 data GaussStats = GaussStats {
       gauss_n :: Int,
@@ -208,6 +219,10 @@ instance ConjugateModel NIGNormal GaussStats Double where
           s' = nign_s + gauss_sum_sq stats +
                nign_r*nign_mu*nign_mu - r'*mu'*mu'
 
+----------------------------------------------------------------------
+-- Dirichlet Categorical                                            --
+----------------------------------------------------------------------
+
 data Counts a c = Counts {
         counts_map :: M.Map a c,
         counts_total :: c
@@ -263,6 +278,10 @@ instance (Eq a, Ord a)
         DC $ merge (Counts counts' sum_counts') alphas
       where counts' = M.map fromIntegral counts
             sum_counts' = fromIntegral sum_counts
+
+----------------------------------------------------------------------
+-- Chinese Restaurant Process                                       --
+----------------------------------------------------------------------
 
 -- CRP is different because it's collapsed without being conjugate.
 data CRP a = CRP a Double deriving (Eq, Show)
