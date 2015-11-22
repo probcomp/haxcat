@@ -98,15 +98,19 @@ I am somewhat confused about sampling vs prediction.
     make a version that checks
 
 Cleanup:
-- Include Test.hs in the test suite; run the examples with fixed seeds.
-- Introduce logmeanexp
-- Do I want to rewrite Assessable a in terms of Model?
-- Do I want to rewrite the two_modes distribution in terms of a
++ Include Test.hs in the test suite; run the examples with fixed seeds.
++ Rename Test.hs to DPMMTest.hs
++ Do I want to rewrite Assessable a in terms of Model?
++ Do I want to rewrite the two_modes distribution in terms of a
   general fixed-weight-mixture combinator?
-- Rewrite DPMM in terms of the abstractions defined in Models; re-test it
-  - Else flush (or delimit?) it; flush DPMM-specific Utils;
-  - Do I want to subject DPMM to some Geweke-style testing?
-- Generalize Test.hs to also test Haxcat?
++ Rewrite DPMM in terms of the abstractions defined in Models; re-test it
+  x Else flush (or delimit?) it; flush DPMM-specific Utils;
+- Rename flipweights_ld to flipweights
+- Convert predictive_logdensity to log domain
+- There is a pun in DPMM: I am reusing the data count from GaussStats
+  for the CRP occurrence count.
+- Do I want to subject DPMM to some Geweke-style testing?
+- Measure some kl divergences for Haxcat?
 + Rename the cabal file to haxcat.cabal
 + Get permission from Baxter to relicense as Apache
   + Add copyright headers

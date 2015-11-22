@@ -14,100 +14,56 @@
 --   See the License for the specific language governing permissions and
 --   limitations under the License.
 
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module DPMM where
 
 import Control.Monad.State.Lazy
-import Data.Random.RVar
-import Data.Map (Map)
 import qualified Data.Map as M
-import Data.Maybe
-import Numeric.SpecFunctions (logGamma)
+import Data.Maybe (fromJust, fromMaybe)
+import Data.Random.RVar
+import Numeric.Log
+import qualified Numeric.Log as Log (sum)
 
+import Models
 import Utils
 
-----------------------------------------------------------------------
--- Normal-Inverse-Gamma Normal component model                      --
-----------------------------------------------------------------------
+-- Dirichlet Process Mixture (of NIGs)
 
-data NIG = NIG { count :: Int
-               , sumx :: Double
-               , sumxsq :: Double
-               } deriving Show
+newtype ClusterID = ClusterID Int deriving (Eq, Ord, Show, Enum)
+newtype DatumID = DatumID Int deriving (Eq, Ord, Show)
 
-emptyNIG :: NIG
-emptyNIG = NIG 0 0 0
-
--- I assume this is the log density of the given data point in the
--- given NIG cluster, hardcoding the hyperparameters to m = 0, r = 1,
--- nu = 1, s = 1.
-logp :: NIG -> Double -> Double
-logp NIG{..} datum = -0.5*log (2*pi) + niglognorm r'' nu'' s'' - niglognorm r' nu' s'
-    where r' = r + count'
-          nu' =  nu + count'
-          m' = (r*m + sumx)/r'
-          s' = s + sumxsq + r*m*m  - r'*m'*m'
-          r'' = r + count' + 1
-          nu'' =  nu + count' + 1
-          m'' = (r*m + sumx + datum)/r''
-          s'' = s + sumxsq + datum*datum + r*m*m  - r''*m''*m''
-          m = 0
-          r = 1
-          nu = 1
-          s = 1
-          count' = fromIntegral count
-          niglognorm :: Double -> Double -> Double -> Double
-          niglognorm r nu s = 0.5*(nu+1) * log 2 + 0.5 * log pi - 0.5 * log r - 0.5*nu * log s + logGamma (nu/2)
-
-rmdatum :: Double -> NIG -> Maybe NIG
-rmdatum _ NIG{count=1} = Nothing
-rmdatum x NIG{count=ct, sumx=sx, sumxsq=sx2} = Just $ NIG (ct - 1) (sx - x) (sx2 - x*x)
-
-addDatum :: Double -> Maybe NIG -> Maybe NIG
-addDatum x Nothing = Just $ NIG 1 x $ x*x
-addDatum x (Just NIG{count=ct, sumx=sx, sumxsq=sx2}) = Just $ NIG (ct + 1) (sx + x) (sx2 + x*x)
-
-----------------------------------------------------------------------
--- Dirichlet Process Mixture (of NIGs)                              --
-----------------------------------------------------------------------
-
-type ClusterID = Int
-type DatumID = Int
-
-data DPMM = DPMM { components :: Map ClusterID NIG
-                 , assignment :: Map DatumID ClusterID
-                 , dataset :: Map DatumID Double
+data DPMM = DPMM { components :: M.Map ClusterID GaussStats
+                 , assignment :: M.Map DatumID ClusterID
+                 , dataset :: M.Map DatumID Double
                  } deriving Show
 
 -- Facade
 
 train_dpmm :: [Double] -> Int -> RVar DPMM
-train_dpmm input iters = execStateT (replicateM iters gibbsSweepT) $ bogoinit input
+train_dpmm input iters =
+    execStateT (replicateM iters gibbsSweepT) $ bogoinit input
 
 -- Initialization
 
 -- Put everything into one component
 bogoinit :: [Double] -> DPMM
-bogoinit dataset = DPMM (M.singleton 0 component) assignment dataset'
-    where component = NIG (length dataset) (sum dataset) (sum $ map (\ x -> x*x) dataset)
-          assignment = M.fromList [(idx, 0) | idx <- [0..length dataset - 1]]
-          dataset' = M.fromList (zip [0..] dataset)
-
--- Gibbs sweeps (on cluster assignments)
-
--- Weight of the datum in every component (inc. a new one)
-getweights :: Double -> DPMM -> [(ClusterID, Double)]
-getweights datum DPMM{..} = new:existing
-    where new = (fst (M.findMax components) + 1, logp emptyNIG datum + 0)
-          existing = [(componentIdx, logp cmpnt datum + log (fromIntegral (count cmpnt)))
-                      | (componentIdx, cmpnt) <- M.toList components]
+bogoinit dataset = DPMM components assignment dataset'
+    where components = (M.singleton (ClusterID 0) component)
+          component =  foldl (flip insert) empty dataset
+          assignment = M.fromList [ (DatumID idx, ClusterID 0)
+                                    | idx <- [0..length dataset - 1]]
+          dataset' = M.fromList (zip (map DatumID [0..]) dataset)
 
 -- Predictive log density for a new datum
+
 predictive_logdensity :: DPMM -> Double -> Double
-predictive_logdensity dpmm datum = logsumexp weights where
-  correction = log $ fromIntegral $ M.size $ dataset dpmm
-  weights = map (\x -> x - correction) $ map snd $ getweights datum dpmm
+predictive_logdensity dpmm datum = ln $ Log.sum weights where
+  correction = log_domain $ fromIntegral $ M.size $ dataset dpmm
+  weights = map (\x -> x / correction) $ map snd $ getweights datum dpmm
+
+-- Gibbs sweeps (on cluster assignments)
 
 -- Gibbs sweep, reassigning every datum
 gibbsSweep :: DPMM -> RVar DPMM
@@ -129,19 +85,36 @@ step :: DatumID -> DPMM -> RVar DPMM
 step idx dpmm = do
     let (datum, dpmm') = uninc idx dpmm
     let weights = getweights datum dpmm'
-    clusterid <- flipweights weights
+    clusterid <- flipweights_ld weights
     return $ reinc datum idx clusterid dpmm'
+
+dpmm_hypers :: NIGNormal
+dpmm_hypers = NIGNormal 1 1 1 0
+
+dpmm_crp_alpha :: Log Double
+dpmm_crp_alpha = 1
+
+-- Weight of the datum in every component (inc. a new one)
+getweights :: Double -> DPMM -> [(ClusterID, Log Double)]
+getweights datum DPMM{..} = new:existing
+    where new = (succ $ fst (M.findMax components),
+                 pdf_predictive empty dpmm_hypers datum * dpmm_crp_alpha)
+          existing = [(componentIdx, pdf_predictive stats dpmm_hypers datum *
+                                     log_domain (fromIntegral (gauss_n stats)))
+                      | (componentIdx, stats) <- M.toList components]
 
 -- unincorporate a datum from its component (and return its value)
 uninc :: DatumID -> DPMM -> (Double, DPMM)
 uninc idx DPMM{..} = (datum, DPMM components' (M.delete idx assignment) (M.delete idx dataset))
-    where components' = M.update (rmdatum datum) componentIdx components
+    where components' = M.alter flush componentIdx components
           datum = fromJust $ M.lookup idx dataset
           componentIdx = fromJust $ M.lookup idx assignment
+          flush = (>>= (nullify Models.null . remove datum))
 
 -- reincorporate a datum into the given component
 reinc :: Double -> DatumID -> ClusterID -> DPMM -> DPMM
 reinc datum datumIdx componentIdx DPMM{..} = DPMM components' assignment' dataset'
     where assignment' = M.insert datumIdx componentIdx assignment
           dataset' = M.insert datumIdx datum dataset
-          components' = M.alter (addDatum datum) componentIdx components
+          components' = M.alter add_datum componentIdx components
+          add_datum = Just . insert datum . fromMaybe empty

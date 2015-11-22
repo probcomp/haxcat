@@ -143,7 +143,7 @@ tests = test [ bogo_cc ~?= bogo_cc_expect
              , True ~=? 0.1 < fixed 0 agreement
              , 1.7743516890623924e-4 ~=?
                (fixed 0 $ estimate_KL_ta two_modes two_modes_ta 300 600)
-             , 0.11991536533960613 ~=?
+             , 0.1199153653396115 ~=?
                (fixed 0 $ measure_dpmm_kl two_modes 300 20 10 500)
              ]
 
