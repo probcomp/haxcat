@@ -25,6 +25,7 @@ import Control.Monad
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 
+import qualified Data.Random.Distribution as Dist
 import Data.Random.Distribution.Bernoulli (bernoulli)
 import Data.Random.Distribution.Categorical (weightedCategorical)
 import qualified Data.Random.Distribution.T as T
@@ -92,6 +93,12 @@ conjugate_sample_predictive :: (ConjugateModel m stat elt)
     => stat -> m -> RVar elt
 conjugate_sample_predictive suffstats model =
     sample (update suffstats model)
+
+newtype DistModel a = DistModel a
+
+instance Dist.PDF d t => Model (DistModel (d t)) t where
+    sample (DistModel m) = Dist.rvar m
+    pdf (DistModel m) = Exp . (Dist.logPdf m)
 
 ----------------------------------------------------------------------
 -- Beta Bernoulli                                                   --
