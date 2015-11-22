@@ -28,8 +28,6 @@ Things to do (+ bullet means "done"):
   + Fix the random seed in HaxcatTest and compare to known string
   + Convert TestSmoke.hs into a cabalized benchmark executable
   + Write code checking structural invariants
-  - could write some diagnostic code, like # views, # clusters,
-    and maybe watch it evolve
   - could write a test suite that generates some data and runs
     inference a while, checking that invariants are preserved.
     - quickcheck over the parameters?
@@ -51,22 +49,9 @@ Things to do (+ bullet means "done"):
   + Taylor says "For NIGNormal pdf, I think you can write this: pdf m
     x = pdf_predictive empty m x.  In fact, that should just be called
     compound_pdf"
-  - Could migrate the Map ColID Column out to the Crosscat object.
-    Then each View is more clearly just the set of applications of a
-    crp (mapping rows to clusters); and I may be able to reuse that
-    object in the relevant part of crosscat too.
-    - define a cc_row_{un,re}inc for updating the suff stats
-      - reinc needs all the per-view cluster ids
-    - change view_row_step to accept the column map (including a spec
-      of which columns are relevant to this view!) and return the new
-      ClusterID
-    - change RowSweep to define cc_row_step, which
-      - unincorporates from the cc-wide suff stats
-      - runs the view_row_steps
-      - reincorporates with the new cluster ids
-  + Might be better to introduce a new object, e.g. CRPMixture, which
-    just knows the CRP, counts, and partition, and split View into a
-    CRPMixture and the current column map.
+  + Introduce a new object, e.g. CRPMixture, which just knows the CRP,
+    counts, and partition, and split View into a CRPMixture and the
+    current column map.
     - Then Crosscat becomes a CRPMixture and the cc_views thing
   - Could add a map of incorporated rows to View (which will be static
     during inference sweeps, but used actively during Geweke testing)
@@ -75,8 +60,6 @@ Things to do (+ bullet means "done"):
       - To actually do that, would need to reconstruct the column data
         during column sweeps, or keep a redundant view of it
     - May be paying with extra map lookups if I do this
-  - Could split view sampling into components
-    - Names: view{_cluster,_row,}_sample
 - I am somewhat confused about sampling vs prediction.
   - I can always define sample as evalState predict (that is, throw
     away the incorporation)
@@ -86,7 +69,7 @@ Things to do (+ bullet means "done"):
   - I should also be able to define predict as sample+incorporate
     - May tweak sampling to take the row id and check whether it was
       already present
-    - Corrent incorporate assumes the incorporee is fresh, but could
+    - Current incorporate assumes the incorporee is fresh, but could
       make a version that checks
 - Benefit: profile inference
   - cabal configure --enable-executable-profiling
@@ -106,7 +89,7 @@ Things to do (+ bullet means "done"):
   - Explicitly unboxing the vectors that hold the data set helps
     persistent memory use some, and drastically reduces the number D#
     constructors being retained
-- Elaboration: I want to have partially incorporated views: ones whose
++ Elaboration: I want to have partially incorporated views: ones whose
   partition is present and incorporated, but whose component suff
   stats are not.  Prediction is well-defined in this case: use the
   existing cluster assignment, make up an end value, and incorporate
@@ -134,45 +117,53 @@ Things to do (+ bullet means "done"):
     list, which can form the basis of a full-size Geweke test
 - Note: I can Geweke test the NIGNormal code separately, on one
   instance.
+- Another test for NIG Normal: For all parameter values and all run
+  lengths, it induces the same distribution as the uncollapsed
+  version.
+  - Venture implements this test, and two further variants
 + Need to incorporate and unincorporate generated data
 - Is there any kind of test that would detect the bug of forgetting to incorporate?
 - I really should modify geweke to report the generated data as well
   - And confirm that it changes if I change whether the transition operator incorporates
-- A test for NIG Normal: For all parameter values and all run lengths, it induces
-  the same distribution as the uncollapsed version.
-  - What exactly does this exercise?
-- Benefit: geweke test n x m
-  - geweke runner ought to have type
++ Benefit: geweke test n x m
+  + geweke runner ought to have type
     RVar a -> (a -> RVar b) -> (b -> a -> RVar a) -> (a -> b -> Probe) -> Results
     except somebody needs to deal with unincorporating and
     reincorporating any collapsed models in a that depend on the data b
     - Can I make the transition operator do that?
-  - Problems with chi2 testing:
-    - the test in the statistics package doesn't return the p value
+  + Problems with chi2 testing:
+    x the test in the statistics package doesn't return the p value
       (wtf?), so I probably need to roll my own
-    - the random-fu package has no test, and also has no room for
+    + the random-fu package has no test, and also has no room for
       survivor functions rather than cdfs in its typeclasses (?)
       - could do it with the plain cdf, I suppose :(
-  - Could also do K-S with respect to the Ord instance (which is more sensitive?)
-    - James Cook wrote a KS test over his random-fu package
-      - But only the one-sided version
-    - statistics has the necessary pieces
-    - people complain that K-S doesn't handle ties well (why not?
-      just an implementation artifact, or does the statistic need to
-      be adjusted?)
-  - I ought to unit-test my chi^2 test implementation (possibly to
-    assess its strength also)
+- Could run Geweke tests on the per-column cluster counts too
+- Could plot the results of Geweke testing for visual confirmation
+- Could also do K-S with respect to the Ord instance (would it be
+  more sensitive than chi^2?)
+  - James Cook wrote a KS test over his random-fu package
+    - But only the one-sided version
+  - statistics has the necessary pieces
+  - people complain that K-S doesn't handle ties well (why not?
+    just an implementation artifact, or does the statistic need to
+    be adjusted?)
+- I ought to unit-test my chi^2 test implementation (possibly to
+  assess its strength also)
 - Benefit: asymptotic consistency test
   - Generically, can measure approximation of the predictive
     distribution
   - For in-class synthetic data can also measure convergence to the
     latent structure
+  - Possible distributions/models to compare:
+    - One joint DPMM (with spherical components or a jointly Gaussian component)
+    - Per-column DPMMs
+    - Just a fat joint Gaussian
+    - Single per-column Gaussians with no clustering
+- Benefit: confirm better predictive accuracy on data synthesized from
+  Crosscat than the distractors would get.
 + Draft predictive simulation
 + Draft predictive pdf
 + Draft multi-row joint simulation
-- Is there a notion of asymptotic consistency with a joint multi-row
-  generator?
-  - Are such things ever in the hypothesis space?
 - Benefit: benchmark inference vs crosscat on synthetic data n x m
 - Draft collecting a data table
 - Benefit: benchmark inference vs crosscat on real data
@@ -211,8 +202,8 @@ For feature parity:
     arithmetic?)
 - Handling heterogeneous data
 - Permit restriction to columns of interest in the predictive distribution
-  (as a work-saving device)
-- Do I want to mess with dynamic insertion and removal of rows?
+  (as a work-saving device) (does laziness just do this?)
++ Do I want to mess with dynamic insertion and removal of rows?
   - Multi-row (conditioned) sampling and assessment might benefit from
     this
 - multinomial component model
