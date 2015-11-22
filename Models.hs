@@ -16,7 +16,9 @@
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Models where
@@ -31,6 +33,7 @@ import Data.Random.Distribution.Categorical (weightedCategorical)
 import qualified Data.Random.Distribution.T as T
 import Data.Random.RVar
 import Numeric.Log hiding (sum)
+import qualified Numeric.Log as Log
 import Numeric.SpecFunctions (logGamma)
 
 import Utils (choose, log_domain)
@@ -285,6 +288,25 @@ instance (Eq a, Ord a)
         DC $ merge (Counts counts' sum_counts') alphas
       where counts' = M.map fromIntegral counts
             sum_counts' = fromIntegral sum_counts
+
+----------------------------------------------------------------------
+-- Categorical Mixture                                              --
+----------------------------------------------------------------------
+
+-- This is a fixed-weight mixture of Models.  This assumes no sharing
+-- and no inference.
+
+data CatComponent elt = forall m. (Model m elt) => CatComponent m
+
+data CatMixture elt = CatMixture [(Double, CatComponent elt)]
+
+instance Model (CatMixture elt) elt where
+    sample (CatMixture cmpts) = do
+      (CatComponent model) <- weightedCategorical cmpts
+      sample model
+    pdf (CatMixture cmpts) x = Log.sum $ map per_cmpt cmpts
+        where
+          per_cmpt (w, (CatComponent model)) = (log_domain w) * pdf model x
 
 ----------------------------------------------------------------------
 -- Chinese Restaurant Process                                       --
