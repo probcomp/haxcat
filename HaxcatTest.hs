@@ -33,7 +33,7 @@ import TestUtils
 import Predictive
 import GewekeTest
 import ChiSquare
-import Test
+import DPMMTest
 
 sampleIO :: RVar a -> IO a
 sampleIO = sampleRVar

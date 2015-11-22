@@ -14,7 +14,7 @@
 --   See the License for the specific language governing permissions and
 --   limitations under the License.
 
-module Test where
+module DPMMTest where
 
 import Data.RVar (sampleRVar)
 import Data.Random
