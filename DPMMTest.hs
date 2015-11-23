@@ -72,7 +72,7 @@ estimate_KL_ta from to latents_ct sample_ct = do
 -- more of its structure.
 instance Model DPMM Double where
     sample _ = return $ error "What?"
-    pdf m = Log.Exp . predictive_logdensity m
+    pdf = predictive_density
 
 trained_dpmm :: [Double] -> Int -> TailAssessable Double
 trained_dpmm input iters = TailAssessable $ train_dpmm input iters

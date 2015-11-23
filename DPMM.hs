@@ -56,10 +56,10 @@ bogoinit dataset = DPMM components assignment dataset'
                                     | idx <- [0..length dataset - 1]]
           dataset' = M.fromList (zip (map DatumID [0..]) dataset)
 
--- Predictive log density for a new datum
+-- Predictive density for a new datum
 
-predictive_logdensity :: DPMM -> Double -> Double
-predictive_logdensity dpmm datum = ln $ Log.sum weights where
+predictive_density :: DPMM -> Double -> Log Double
+predictive_density dpmm datum = Log.sum weights where
   correction = log_domain $ fromIntegral $ M.size $ dataset dpmm
   weights = map (\x -> x / correction) $ map snd $ getweights datum dpmm
 
