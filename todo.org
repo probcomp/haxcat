@@ -74,10 +74,10 @@ Things to do (+ bullet means "done"):
 + Draft predictive pdf
 + Draft multi-row joint simulation
 - Path 1:
-  - Define a Plotting.Stub module
-  - Write a function there that shells out to Seaborn to draw a heatmap
-  - Draw a dependence probability heatmap for 1 cc on synthetic data
-  - Generalize to several ccs
+  + Define a Plotting.Stub module
+  + Write a function there that shells out to Seaborn to draw a heatmap
+  + Draw a dependence probability heatmap for 1 cc on synthetic data
+  + Generalize to several ccs
   - Proceed to Satellites
 - Path 2:
   - Write a Chart program that draws the plot(s) I want to see for

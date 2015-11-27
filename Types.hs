@@ -301,10 +301,13 @@ data Crosscat = Crosscat
 cc_empty :: CRP ViewID -> Crosscat
 cc_empty crp = Crosscat (crp_seq_empty' crp) M.empty
 
+view_id_for :: Crosscat -> ColID -> Maybe ViewID
+view_id_for Crosscat {..} c_id = crp_seq_lookup c_id cc_partition
+
 col_for :: Crosscat -> ColID -> Column
-col_for Crosscat {..} c_id = fromJust $ M.lookup c_id (view_columns view)
+col_for cc@Crosscat {..} c_id = fromJust $ M.lookup c_id (view_columns view)
     where view = fromJust $ M.lookup view_id cc_views
-          view_id = fromJust $ crp_seq_lookup c_id cc_partition
+          view_id = fromJust $ view_id_for cc c_id
 
 cc_col_uninc :: ColID -> Crosscat -> Crosscat
 cc_col_uninc col_id Crosscat {..} =
