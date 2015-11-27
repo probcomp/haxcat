@@ -33,8 +33,18 @@ data Plot = Plot { save_data :: FilePath -> IO ()
 
 -- Here's a stab at an interface: accept the two column lists and a
 -- function that produces the datum, and plot it.
-cluster_map :: (Show a, Show b) => [a] -> [b] -> (a -> b -> Double) -> Plot
-cluster_map = undefined
+-- Example: Plotting.Stub.show $ cluster_map "foo" "bar" [1,2] [3,4] (+)
+cluster_map :: (Show a, Show b) => String -> String
+            -> [a] -> [b] -> (a -> b -> Double) -> Plot
+cluster_map dim1_name dim2_name dim1_vals dim2_vals f = Plot save plot where
+    save file = writeFile file csv_str
+    csv_str = unlines $ map tuple_to_str tuples
+    tuple_to_str (a, b, c) = a ++ "," ++ b ++ "," ++ c
+    tuples = (dim1_name, dim2_name, "value"):concatMap minor dim1_vals
+    minor major_val = map (cell major_val) dim2_vals
+    cell major_val minor_val = ( Prelude.show major_val, Prelude.show minor_val
+                               , Prelude.show $ f major_val minor_val)
+    plot = clustermap_plot_func dim1_name dim2_name
 
 -- Display a plot interactively (in-process)
 show :: Plot -> IO ExitCode
