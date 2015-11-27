@@ -53,7 +53,7 @@ save filename Plot{..} = do
              ++ "plot(\"/tmp/plot_data.csv\").savefig(\"" ++ filename ++ "\")'"
 
 test_plot :: Plot
-test_plot = Plot save_data (unlines plot_func_def) where
+test_plot = Plot save_data (clustermap_plot_func "column_a" "column_b") where
     save_data file = do
       writeFile file $ unlines [ "column_a,column_b,value"
                                , "1,1,1"
@@ -61,11 +61,14 @@ test_plot = Plot save_data (unlines plot_func_def) where
                                , "2,1,3"
                                , "2,2,4"
                                ]
+
+clustermap_plot_func :: String -> String -> String
+clustermap_plot_func dim1 dim2 = unlines plot_func_def where
     plot_func_def =
         [ "def plot(name):"
         , "  import pandas as pd"
         , "  import seaborn as sns"
         , "  data = pd.read_csv(name)"
-        , "  data = data.pivot(\"column_a\", \"column_b\", \"value\")"
+        , "  data = data.pivot(\"" ++ dim1 ++ "\", \"" ++ dim2 ++ "\", \"value\")"
         , "  return sns.clustermap(data)"
         ]
