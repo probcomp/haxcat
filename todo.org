@@ -73,6 +73,18 @@ Things to do (+ bullet means "done"):
 + Draft predictive simulation
 + Draft predictive pdf
 + Draft multi-row joint simulation
+- Path 1:
+  - Define a Plotting.Stub module
+  - Write a function there that shells out to Seaborn to draw a heatmap
+  - Draw a dependence probability heatmap for 1 cc on synthetic data
+  - Generalize to several ccs
+  - Proceed to Satellites
+- Path 2:
+  - Write a Chart program that draws the plot(s) I want to see for
+    Chi^2 evidence
+  - Use it to (unit) test my Chi^2 method
+  - [Option] think about a statistical (probabilistic) unit testing
+    framework that displays evidence plots selectively
 - Benefit: benchmark inference vs crosscat on synthetic data n x m
 - Draft collecting a data table
 - Benefit: benchmark inference vs crosscat on real data
@@ -109,6 +121,8 @@ Cleanup:
 - There is a pun in DPMM: I am reusing the data count from GaussStats
   for the CRP occurrence count.
 - Do I want to subject DPMM to some Geweke-style testing?
+- Do I want to render the DPMM inspection functions as instances of
+  the Models classes?
 - Measure some kl divergences for Haxcat?
 + Rename the cabal file to haxcat.cabal
 + Get permission from Baxter to relicense as Apache
@@ -116,6 +130,9 @@ Cleanup:
 
 Refactorings:
 - When gauss_n is zero I get NaN stats :(
+- pdf_marginal (and therefore pdf) of NIGNormal may compute niglognorm
+  too many times, (4 instead of 2) if GHC doesn't notice that the two
+  bases cancel.
 - Taylor says "CRP pdf_predictive should perhaps be rewritten in
   terms of bernoulli_weight [or multinomial]".
 - Taylor says "it occurred to me that bernoulli_weight ought to have
