@@ -73,12 +73,11 @@ Things to do (+ bullet means "done"):
 + Draft predictive simulation
 + Draft predictive pdf
 + Draft multi-row joint simulation
-- Path 1:
++ Path 1:
   + Define a Plotting.Stub module
   + Write a function there that shells out to Seaborn to draw a heatmap
   + Draw a dependence probability heatmap for 1 cc on synthetic data
   + Generalize to several ccs
-  - Proceed to Satellites
 - Path 2:
   - Write a Chart program that draws the plot(s) I want to see for
     Chi^2 evidence
@@ -87,6 +86,12 @@ Things to do (+ bullet means "done"):
     framework that displays evidence plots selectively
 - Benefit: benchmark inference vs crosscat on synthetic data n x m
 - Draft collecting a data table
+  - Frames data loading is kooky: it guesses the data's types by
+    reading the dataset _at compile time_.
+    - I guess that's not too bad; and can presumably be overridden at need
+  - Frames also depends on base >= 4.7 && < 4.9
+    - Could upgrade ghc globally
+    - Could learn "stack" and install a local one
 - Benefit: benchmark inference vs crosscat on real data
 - Benefit: benchmark simulation vs crosscat on real data
 - Benefit: test quality on real data, once I figure out how to do that
