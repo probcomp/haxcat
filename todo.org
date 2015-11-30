@@ -92,6 +92,104 @@ Things to do (+ bullet means "done"):
   + Q: Frames also depends on base >= 4.7 && < 4.9
     - Could upgrade ghc globally
     - Could learn "stack" and install a local one
+  + A: Use stack
+  - Version 1:
+    - Get a read of Satellites as Doubles only, with missing and NaN
+      values parsed out
+      + I can't seem to be able to declare my own representation types
+        for the columns
+      - Storing Maybes, option 1:
+        - Define a newtype that means "Maybe Double represented with a sentinel nan"
+        - Define a frame parser instance for it using Just . non sentinel
+        - Define a VectorFor instance for it
+        - Do I need to define an unboxed vector instance for it?
+    - The above will be annoying anyway, because I will need to change
+      everything to Maybe Double to deal with missing data
+- Candidate plan for dynamically-typed crosscat:
+  - Parameterize the column store (and everything) by the cell type
+  - Define a combinator on Models that accepts an Iso a b and converts
+    a Model on a into a Model on b
+    - Option: an Iso would have to error out on inappropriate
+      arguments; could do something like a Prism that automatically
+      ignores them
+  - Define a sum combinator on models:
+      (Model m1 a, Model m2 a) => Model (Either m1 m2) a
+    or even
+      (Model m1 a, Model m2 b) => Model (Either m1 m2) (Either a b)
+    (which is the composition of the above two)
+  - Define the initial universe to be Either Double Int
+  - Initialization requires a term that gives the models to use for
+    all the columns in the dataset; being a term, it can be computed
+    smoothly by a client
+  - Pro: Log time access b/c of Map (could move to HashMap)
+  - Pro: Single compiled program works on all datasets
+  - Pro/Con: Easy to implement, so I am not learning new technology
+  - Con: No type safety
+  - Con: Default relatively inefficient data representation, but
+    fixable
+- Can reduce the relative inefficiency of data representation by
+  making the universe a newtype that packs Either Double Int into a
+  Word64, either in the nan space or lossily with a tag bit
+  - Though, the in-model suff stat computations should dominate anyway
+    (?)
+  - Or by representing Int as a Double that happens to be an integer,
+    and permitting the ambiguity
+  - This is what Lovcat does for a data representation
+- Alternative plan for dynamically-typed crosscat:
+  - Can I make the Either column-level, and at least guarantee
+    model-data agreement within a column?  Would I have to store
+    (pointers to) the column data with the columns for that?
+- Candidate plan for statically-typed crosscat:
+  - Idea: introduce a type-level list of the data and model types;
+    replace column ids by labeled indexing into it
+  - Details:
+    - Parameterize Column by its hypers and stats types
+    - Parameterize View by the list of all possible column types
+    - Make the view_columns field a Rec Maybe columns
+    - Parameterize Row by all possible column element types (?) and
+      make it represented as a Rec Maybe
+    - Parameterize Crosscat by the list of all possible column types
+      - The views are all the same type, so the map remains OK
+    - Parameterize the dataset by the list of column types (like a
+      Frame, except I think I want to allow missing data with Maybe)
+    - view row {un,re} incorporation will need to zip/map Rec Maybe
+      values ignoring the Nothings.
+    - view_weights will need to zip and fold Rec Maybe values,
+      skipping the Nothings (presumably fold will require first
+      mapping to a homogeneous record; I can do that)
+    - I need some way to treat the identities of the data columns
+      homogeneously, in order to CRP them to view IDs
+      - Can probably just keep a constant Record of ColID objects,
+        which then map through the cc_partition to ViewIDs.
+      - col_sweep becomes weird: I need to be able to operate on a
+        zipper over the type-level list of columns, with the place
+        being represented, for example, by the ColID and a generic
+        lens into the kinds of records I will encounter.
+      - Alternately, could define an object which is a column-wise
+        zipper on the whole crosscat state (the partition, the done
+        portions of all the views, the non-done portions of all the
+        views) and an operation that takes the top column off the work
+        queue, assigns it, and puts it in the done queue.
+        - Has the advantage of not indexing deep into the view
+          records, but that cost should be dwarfed by the cost of
+          computing column_full_pdf anyway.
+    - Will I need to copy all the data in column_major_to_row_major or
+      can I get away with allocating the access function?
+      - Frame just allocates the access function; the "row major"
+        representation is a length and a row-wise indexing function.
+  - Pro: Type safety: All the models are guaranteed to be appropriate
+    for their respective data.
+  - Pro: Efficient data representation
+  - Con/Pro: Tricky to implement, so I would be learning new technology
+  - Con: Potentially linear-time indexing, at least before vinyl 0.5
+    https://github.com/VinylRecords/Vinyl/issues/61
+    - Not likely to be a very big deal, because the niglognorm
+      computations should dominate runtime
+    - Might be fixable by further magic in vinyl
+  - Con: Need to compile a new client program for each dataset
+- An option is to do both (in separate nested modules) and compare them.
+  - To the extent that they manage to share any code, some of the type
+    safety checks will carry over
 - Benefit: benchmark inference vs crosscat on real data
 - Benefit: benchmark simulation vs crosscat on real data
 - Benefit: test quality on real data, once I figure out how to do that
