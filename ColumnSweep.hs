@@ -57,7 +57,7 @@ import Types
 --     for having an extra crp partition around.  (Technically this
 --     argument requires proposing the crp alpha from the prior as
 --     well).
--- - The difference for uncollapsed columns seems to be that the the
+-- - The difference for uncollapsed columns seems to be that the
 --   per-column cluster objects have states in addition to suffstats
 --   and (copies of?) the hyper parameters, which they resample
 --   e.g. when the column is reassigned.
