@@ -253,6 +253,8 @@ Refactorings:
 
 For feature parity:
 - Hyperparameter inference
+  - Should be able to set up Gibbs sampling by quadrature (maybe the
+    Tanh-Sinh package?)
 - Conditional predictive simulation and assessment, for known and unknown rows
   - Constrained sampling one row looks a lot like unconstrained, except the
     constraints get passed in and affect the view_cluster_sample distribution
