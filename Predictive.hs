@@ -32,50 +32,50 @@ import Models
 import Types
 import RowSweep (view_weights)
 
-view_cluster_sample :: View -> RVar ClusterID
+view_cluster_sample :: View a -> RVar ClusterID
 view_cluster_sample View{..} = crp_seq_sample view_partition
 
-view_cluster_predict :: RowID -> View -> RVar (ClusterID, View)
+view_cluster_predict :: RowID -> View a -> RVar (ClusterID, View a)
 view_cluster_predict r_id view = do
   (c_id, part') <- crp_seq_predict r_id $ view_partition view
   return (c_id, view{view_partition = part'})
 
-column_sample :: ClusterID -> Column -> RVar Double
+column_sample :: ClusterID -> Column a -> RVar a
 column_sample c_id (Column hypers m) = sample_predictive stats hypers where
   stats = fromMaybe empty $ M.lookup c_id m
 
-view_sample :: View -> RVar (M.Map ColID Double)
+view_sample :: View a -> RVar (M.Map ColID a)
 view_sample v@View{..} = do
   cluster_id <- view_cluster_sample v
   mapM (column_sample cluster_id) view_columns
 
 -- ASSUME The RowID is not incorporated into the suff stats (the
 -- partition is checked)
-view_predict :: RowID -> View -> RVar (M.Map ColID Double, View)
+view_predict :: RowID -> View a -> RVar (M.Map ColID a, View a)
 view_predict r_id view = do
   (c_id, view') <- view_cluster_predict r_id view
   ans <- mapM (column_sample c_id) $ view_columns view'
   let view'' = view_row_only_reinc (map_to_row ans) c_id view'
   return (ans, view'')
 
-cc_sample :: Crosscat -> RVar Row
+cc_sample :: Crosscat a -> RVar (Row a)
 cc_sample Crosscat{..} = liftM (map_to_row . M.foldl' M.union M.empty) per_view
     where
       per_view = mapM view_sample cc_views
 
-cc_predict :: RowID -> Crosscat -> RVar (Row, Crosscat)
+cc_predict :: RowID -> Crosscat a -> RVar (Row a, Crosscat a)
 cc_predict r_id Crosscat{..} = do
-  -- per_view :: M.Map ViewID (M.Map ColID Double, View)
+  -- per_view :: M.Map ViewID (M.Map ColID Double, View a)
   per_view <- mapM (view_predict r_id) cc_views
   let cc_views' = M.map snd per_view
       row = map_to_row $ M.foldl' M.union M.empty $ M.map fst per_view
   return (row, Crosscat cc_partition cc_views')
 
-view_pdf_predictive :: View -> PDF Row
+view_pdf_predictive :: View a -> PDF (Row a)
 view_pdf_predictive view row = Log.sum $ map snd $ view_weights view row
 
 -- Treats missing columns correctly, namely by ignoring them.
-cc_pdf_predictive :: Crosscat -> PDF Row
+cc_pdf_predictive :: Crosscat a -> PDF (Row a)
 cc_pdf_predictive Crosscat{..} row =
     -- TODO Perhaps this would be faster if I used the cc_partition to
     -- per-filter the data in the row, but this remains correct
@@ -83,7 +83,7 @@ cc_pdf_predictive Crosscat{..} row =
     -- shouldn't?)
     product $ map (flip view_pdf_predictive row) $ M.elems cc_views
 
-cc_predict_full :: [ColID] -> [RowID] -> RVar Crosscat
+cc_predict_full :: [ColID] -> [RowID] -> RVar (Crosscat a)
 cc_predict_full cols rows = do
   partition <- crp_seq_empty (CRP (ViewID 0) cc_alpha) cols
   views <- mapM mk_view $ crp_seq_values partition
