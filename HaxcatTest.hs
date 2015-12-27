@@ -134,6 +134,7 @@ agreement = do
 -- any analysis.
 tests :: Test
 tests = test [ bogo_cc ~?= bogo_cc_expect
+             , test $ stable "test/golden/bogo_cc" bogo_cc
              , structure_test bogo_cc
              , row_to_map bogo_row ~?= M.fromList [ (ColID 0,-2.6221942999884886)
                                                   , (ColID 1,0.5917825321828307)

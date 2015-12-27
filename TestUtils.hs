@@ -26,6 +26,8 @@ import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 import qualified Data.Vector as V
 import Data.Random
+import System.Directory
+import System.FilePath.Posix
 
 import Test.HUnit hiding (Counts)
 
@@ -56,6 +58,22 @@ bogodata2 rows cols = do
         reshape rows = M.fromList $ map (pick rows) $ map ColID [0..cols-1]
         pick rows col_id = (col_id, V.fromList $ map (lookup col_id) rows)
         lookup col_id (Row _ cell) = fromJust $ cell col_id
+
+stable :: (Show a) => FilePath -> a -> IO ()
+stable name x = do
+  exists <- doesFileExist name
+  if exists then do
+    in_file <- readFile name
+    in_file @=? (show x)
+  else do
+    let dirname = dropFileName name
+    createDirectoryIfMissing True dirname
+    putStrLn $ "Saving stable object " ++ name
+    writeFile name (show x)
+
+----------------------------------------------------------------------
+-- Checking structural invariants                                   --
+----------------------------------------------------------------------
 
 class StructureCheckable a where
     structure_test :: a -> Test

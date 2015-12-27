@@ -32,7 +32,9 @@ Test-suite tests
   Main-is:             HaxcatTest.hs
   build-depends:       base >=4.6 && <4.9, random-fu, containers,
                        math-functions, mtl, rvar,
-                       log-domain, vector, HUnit, random
+                       log-domain, vector, HUnit, random,
+                       -- For saving golden files
+                       directory, filepath
   default-language:    Haskell2010
   Ghc-options:         -Wall -fno-warn-name-shadowing -O2
 
