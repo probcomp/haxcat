@@ -117,6 +117,8 @@ Things to do (+ bullet means "done"):
     puts into the failure message that this is a golden file test, and
     not to read the details of the difference too closely.  The name
     would be useful too.
+- I should probably pin down the Query module a little by making a
+  unit test that it can produce a plot on demand.
 - Candidate plan for dynamically-typed crosscat:
   - Parameterize the column store (and everything) by the cell type
   - Define a combinator on Models that accepts an Iso a b and converts

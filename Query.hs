@@ -24,12 +24,12 @@ import qualified Plotting.Stub as Stub
 import Predictive (cc_predict_full)
 import Types
 
-structurally_dependent :: Crosscat -> ColID -> ColID -> Bool
+structurally_dependent :: (Crosscat a) -> ColID -> ColID -> Bool
 structurally_dependent cc c1 c2 = v1 == v2 where
     v1 = fromJust $ view_id_for cc c1
     v2 = fromJust $ view_id_for cc c2
 
-dependence_probability_heatmap :: [Crosscat] -> [ColID] -> Stub.Plot
+dependence_probability_heatmap :: [Crosscat a] -> [ColID] -> Stub.Plot
 dependence_probability_heatmap ccs cols =
     Stub.cluster_map "variable 1" "variable 2" cols cols f where
         f c1 c2 = num / denom where

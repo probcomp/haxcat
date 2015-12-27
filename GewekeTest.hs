@@ -45,36 +45,36 @@ instrumented_chain init step probe k = do
   rest <- instrumented_chain (step x) step probe (k-1)
   return $ (probe x):rest
 
-cc_sample_many :: [RowID] -> Crosscat -> RVar [Row]
+cc_sample_many :: [RowID] -> Crosscat a -> RVar [Row a]
 cc_sample_many rows cc = evalStateT act cc where
     act = mapM (\r_id -> StateT $ cc_predict r_id) rows
 
-cc_geweke_chain :: [RowID] -> [ColID] -> Int -> RVar Crosscat
+cc_geweke_chain :: [RowID] -> [ColID] -> Int -> RVar (Crosscat a)
 cc_geweke_chain rows cols k = chain init step k where
     init = cc_predict_full cols rows
     step = (cc_geweke_step rows)
 
 cc_geweke_chain_instrumented ::
-  [RowID] -> [ColID] -> (Crosscat -> a) -> Int -> RVar [a]
+  [RowID] -> [ColID] -> (Crosscat b -> a) -> Int -> RVar [a]
 cc_geweke_chain_instrumented rows cols probe k =
   instrumented_chain init (cc_geweke_step rows) probe k where
     init = cc_predict_full cols rows
 
-cc_geweke_step :: [RowID] -> Crosscat -> RVar Crosscat
+cc_geweke_step :: [RowID] -> Crosscat a -> RVar (Crosscat a)
 cc_geweke_step rows = geweke_transition (cc_sample_many rows)
                       $ \d -> execStateT $ cc_geweke_step_act rows d
 
-cc_geweke_step_act :: [RowID] -> [Row] -> StateT Crosscat RVar ()
+cc_geweke_step_act :: [RowID] -> [Row a] -> StateT (Crosscat a) RVar ()
 cc_geweke_step_act rows d = do
   let row_data = zip rows d
   mapM_ (modifyT . (return .) . uncurry cc_row_only_reinc) row_data
   infer $ row_major_to_column_major d
   mapM_ (modifyT . (return .) . uncurry cc_row_only_uninc) row_data
 
-view_count :: Crosscat -> Int
+view_count :: Crosscat a -> Int
 view_count Crosscat{..} = crp_seq_size cc_partition
 
-column_cluster_count :: ColID -> Crosscat -> Int
+column_cluster_count :: ColID -> Crosscat a -> Int
 column_cluster_count c_id Crosscat{..} = crp_seq_size view_partition where
     v_id = fromJust $ crp_seq_lookup c_id cc_partition
     View{..} = fromJust $ M.lookup v_id cc_views
