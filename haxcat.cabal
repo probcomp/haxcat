@@ -21,9 +21,9 @@ library
                        math-functions, mtl, rvar,
                        log-domain, vector,
                        -- For the plotting stub
-                       process,
-                       -- For the csv parsing
-                       Frames, pipes, vinyl
+                       process
+                       -- Statically typed option for csv parsing
+                       -- Frames, pipes, vinyl
   default-language:    Haskell2010
   Ghc-options:         -Wall -fno-warn-name-shadowing -O2
 
