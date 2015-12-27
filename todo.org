@@ -120,7 +120,13 @@ Things to do (+ bullet means "done"):
 - I should probably pin down the Query module a little by making a
   unit test that it can produce a plot on demand.
 - Candidate plan for dynamically-typed crosscat:
-  - Parameterize the column store (and everything) by the cell type
+  + Parameterize the column store (and everything) by the cell type
+  - Bug:
+    - Predictive.cc_predict_full does not synthesize column hyper
+      parameters (how can it?), and thus does not put any columns into
+      the views -- just invents a column partition
+    - Consequently, cc_predict emits an empty row
+    - Consequently, cc_geweke_step doesn't do anything
   - Define a combinator on Models that accepts an Iso a b and converts
     a Model on a into a Model on b
     - Option: an Iso would have to error out on inappropriate
