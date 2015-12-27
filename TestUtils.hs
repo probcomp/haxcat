@@ -64,7 +64,7 @@ stable name x = do
   exists <- doesFileExist name
   if exists then do
     in_file <- readFile name
-    in_file @=? (show x)
+    assertEqual ("Stability test " ++ name) in_file (show x)
   else do
     let dirname = dropFileName name
     createDirectoryIfMissing True dirname

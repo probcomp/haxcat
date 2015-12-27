@@ -107,12 +107,16 @@ Things to do (+ bullet means "done"):
       everything to Maybe Double to deal with missing data
 - Local problem: migrating to GHC 7.10 with Stack changes the values
   that come out of the prng, spuriously breaking the test suite.
-  - Plan: Define a test helper named "stable :: (Show a) => FilePath -> a -> IO Bool"
+  + Plan: Define a test helper named "stable :: (Show a) => FilePath -> a -> IO Bool"
     that shows the given a and tries to compare the result to what's
     stored in the file.
     - If the file doesn't exist, write it and pass the test; possibly
       emit an informational message to that effect.
     - Else, read the file and check string equality against show a.
+  + Probably a good idea to make sure that the golden file abstraction
+    puts into the failure message that this is a golden file test, and
+    not to read the details of the difference too closely.  The name
+    would be useful too.
 - Candidate plan for dynamically-typed crosscat:
   - Parameterize the column store (and everything) by the cell type
   - Define a combinator on Models that accepts an Iso a b and converts
