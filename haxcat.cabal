@@ -24,6 +24,7 @@ library
                        process
                        -- Statically typed option for csv parsing
                        -- Frames, pipes, vinyl
+  other-modules:       ColumnSweep, Models, RowSweep, Types, Utils
   default-language:    Haskell2010
   Ghc-options:         -Wall -fno-warn-name-shadowing -O2
 
@@ -35,6 +36,9 @@ Test-suite tests
                        log-domain, vector, HUnit, random,
                        -- For saving golden files
                        directory, filepath
+  other-modules:       ChiSquare, ColumnSweep, DPMM, DPMMTest, GewekeTest,
+                       Haxcat, Models, Predictive, RowSweep,
+                       TestUtils, Types, Utils
   default-language:    Haskell2010
   Ghc-options:         -Wall -fno-warn-name-shadowing -O2
 
@@ -45,6 +49,8 @@ executable bench-infer
                        log-domain, vector, HUnit, random,
                        -- For saving golden files
                        directory, filepath
+  other-modules:       ColumnSweep, Haxcat, Models, Predictive, RowSweep,
+                       TestUtils, Types, Utils
   default-language:    Haskell2010
   ghc-options:         -Wall -fno-warn-name-shadowing -O2 -rtsopts
   ghc-prof-options:    -fprof-auto "-with-rtsopts=-s"
