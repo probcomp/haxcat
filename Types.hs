@@ -60,13 +60,13 @@ instance Show ClusterID where
 -- Can probably get away with making this unboxed
 type ColumnData a = V.Vector a
 
-data Row = Row (S.Set ColID) (ColID -> Maybe Double)
+data Row a = Row (S.Set ColID) (ColID -> Maybe a)
 
-row_to_map :: Row -> M.Map ColID Double
+row_to_map :: Row a -> M.Map ColID a
 row_to_map (Row cols cell) = M.fromAscList $ catMaybes $ map cellWithKey $ S.toAscList cols where
     cellWithKey col_id = liftM (col_id,) $ cell col_id
 
-map_to_row :: M.Map ColID Double -> Row
+map_to_row :: M.Map ColID a -> Row a
 map_to_row m = Row (M.keysSet m) (flip M.lookup m)
 
 
@@ -180,17 +180,17 @@ crp_seq_values = M.elems . crp_seq_results
 -- - Decision: shared per column (but not across columns with the same
 --   type).
 
-data Column = forall hypers stats.
-    (Show hypers, Show stats, CompoundModel hypers stats Double)
+data Column a = forall hypers stats.
+    (Show hypers, Show stats, CompoundModel hypers stats a)
     => Column hypers (M.Map ClusterID stats)
 
-deriving instance Show Column
+deriving instance Show (Column a)
 
 -- XXX Hack hack hack hack blame GHC can't check whether the Eq
 -- dictionary that column A has for e.g. its hypers is or is not the
 -- same as the Eq dictionary column B has for its, so there is no way
 -- to make a proper Eq instance for Columns.
-instance Eq Column where
+instance Eq (Column a) where
     a == b = show a == show b
 
 type Partition = M.Map RowID ClusterID
@@ -203,13 +203,13 @@ recompute_suff_stats p d = M.foldlWithKey' stat_insert M.empty p where
           -- add_datum :: Maybe stat -> Maybe stat
           add_datum s = Just $ insert (d V.! r_id) $ fromMaybe empty s
 
-repartition :: Partition -> ColumnData Double -> Column -> Column
+repartition :: Partition -> ColumnData a -> Column a -> Column a
 repartition p d (Column hypers _) =
     Column hypers $ recompute_suff_stats p d
 
-data View = View
+data View a = View
     { view_partition :: CRPSequence RowID ClusterID
-    , view_columns :: M.Map ColID Column
+    , view_columns :: M.Map ColID (Column a)
     }
     deriving (Eq, Show)
 -- INVARIANT: The stats held in each column have to agree with the
@@ -221,36 +221,36 @@ data View = View
 --   to add and remove columns (for which Mixture would need to change
 --   the element type)
 
-view_col_uninc :: ColID -> View -> View
+view_col_uninc :: ColID -> View a -> View a
 view_col_uninc col_id v@View{view_columns = cs} = v{view_columns = cs'}
     where cs' = M.delete col_id cs
 
 -- ASSUME the column is already correctly partitioned
-view_col_reinc :: ColID -> Column -> View -> View
+view_col_reinc :: ColID -> Column a -> View a -> View a
 view_col_reinc col_id col v@View{view_columns = cs} = v{view_columns = cs'}
     where cs' = M.insert col_id col cs
 
-view_cluster_uninc :: RowID -> View -> View
+view_cluster_uninc :: RowID -> View a -> View a
 view_cluster_uninc r_id v@View{view_partition = vp} = v{view_partition = vp'}
     where vp' = crp_seq_uninc r_id vp
 
 -- Treats extra columns in the Row correctly, namely by ignoring them.
 -- TODO Tweak to ignore missing columns in the Row also (at fromJust)
-view_row_only_uninc :: RowID -> Row -> View -> View
+view_row_only_uninc :: RowID -> Row a -> View a -> View a
 view_row_only_uninc r_id (Row _ cell) View{..} =
     View view_partition view_columns' where
         cluster_id = fromJust $ crp_seq_lookup r_id view_partition
         view_columns' = M.mapWithKey col_uninc view_columns
-        col_uninc :: ColID -> Column -> Column
+        -- col_uninc :: ColID -> Column a -> Column a  (same a)
         col_uninc col_id (Column h m) = Column h m'
             where m' = M.alter flush cluster_id m
                   item = fromJust $ cell col_id
                   flush = (>>= (nullify Models.null . remove item))
 
-view_row_uninc :: RowID -> Row -> View -> View
+view_row_uninc :: RowID -> Row a -> View a -> View a
 view_row_uninc r_id r = view_cluster_uninc r_id . view_row_only_uninc r_id r
 
-view_cluster_reinc :: RowID -> ClusterID -> View -> View
+view_cluster_reinc :: RowID -> ClusterID -> View a -> View a
 view_cluster_reinc r_id cluster_id v@View{view_partition = vp} =
     v{view_partition = vp'} where
         vp' = crp_seq_reinc r_id cluster_id vp
@@ -259,30 +259,30 @@ view_cluster_reinc r_id cluster_id v@View{view_partition = vp} =
 -- TODO Tweak to ignore missing columns in the Row also (at fromJust)
 -- TODO For possible uncollapsed columns, should probably accept a
 -- candidate new cluster.
-view_row_only_reinc :: Row -> ClusterID -> View -> View
+view_row_only_reinc :: Row a -> ClusterID -> View a -> View a
 view_row_only_reinc (Row _ cell) cluster_id View{..} =
     View view_partition view_columns' where
       view_columns' = M.mapWithKey col_reinc view_columns
-      col_reinc :: ColID -> Column -> Column
+      -- col_reinc :: ColID -> Column a -> Column a (same a)
       col_reinc col_id (Column h m) = Column h (M.alter add_datum cluster_id m)
           where -- add_datum :: Maybe stats -> Maybe stats
                 add_datum stats = Just $ insert item $ fromMaybe empty stats
                 item = fromJust $ cell col_id
 
-view_row_only_reinc' :: RowID -> Row -> View -> View
+view_row_only_reinc' :: RowID -> Row a -> View a -> View a
 view_row_only_reinc' r_id row v@View{..} = view_row_only_reinc row cluster_id v
     where cluster_id = fromJust $ crp_seq_lookup r_id view_partition
 
-view_row_reinc :: RowID -> Row -> ClusterID -> View -> View
+view_row_reinc :: RowID -> Row a -> ClusterID -> View a -> View a
 view_row_reinc r_id row c_id =
     view_row_only_reinc row c_id . view_cluster_reinc r_id c_id
 
-view_nonempty :: View -> Maybe View
+view_nonempty :: View a -> Maybe (View a)
 view_nonempty v@View{view_columns = cs} | M.size cs == 0 = Nothing
                                         | otherwise = Just v
 
 -- The row ids and the entropy are for initializing a random partition
-view_empty :: CRP ClusterID -> [RowID] -> RVar View
+view_empty :: CRP ClusterID -> [RowID] -> RVar (View a)
 view_empty crp rows = liftM (flip View M.empty) $ crp_seq_empty crp rows
 
 -- Choice point: are cluster ids unique or shared across columns?
@@ -292,30 +292,30 @@ view_empty crp rows = liftM (flip View M.empty) $ crp_seq_empty crp rows
 --   suff stats, I also need to know the column.
 -- Decision: shared.
 
-data Crosscat = Crosscat
+data Crosscat a = Crosscat
     { cc_partition :: CRPSequence ColID ViewID
-    , cc_views :: M.Map ViewID View
+    , cc_views :: M.Map ViewID (View a)
     }
     deriving (Eq, Show)
 
-cc_empty :: CRP ViewID -> Crosscat
+cc_empty :: CRP ViewID -> Crosscat a
 cc_empty crp = Crosscat (crp_seq_empty' crp) M.empty
 
-view_id_for :: Crosscat -> ColID -> Maybe ViewID
+view_id_for :: Crosscat a -> ColID -> Maybe ViewID
 view_id_for Crosscat {..} c_id = crp_seq_lookup c_id cc_partition
 
-col_for :: Crosscat -> ColID -> Column
+col_for :: Crosscat a -> ColID -> Column a
 col_for cc@Crosscat {..} c_id = fromJust $ M.lookup c_id (view_columns view)
     where view = fromJust $ M.lookup view_id cc_views
           view_id = fromJust $ view_id_for cc c_id
 
-cc_col_uninc :: ColID -> Crosscat -> Crosscat
+cc_col_uninc :: ColID -> Crosscat a -> Crosscat a
 cc_col_uninc col_id Crosscat {..} =
     Crosscat cc_partition' cc_views' where
         view_id = fromJust $ crp_seq_lookup col_id cc_partition
         cc_partition' = crp_seq_uninc col_id cc_partition
         cc_views' = M.update flush view_id cc_views
-        flush :: View -> Maybe View
+        flush :: View a -> Maybe (View a)
         flush = view_nonempty . view_col_uninc col_id
 
 -- - Assume this ColID has already been unincorporated.
@@ -323,7 +323,7 @@ cc_col_uninc col_id Crosscat {..} =
 --   the view.
 -- - Pass a View object in case this Crosscat has no binding for the
 --   ViewID (i.e., if the column is becoming a singleton)
-cc_col_reinc :: ColID -> Column -> ViewID -> View -> Crosscat -> Crosscat
+cc_col_reinc :: ColID -> Column a -> ViewID -> View a -> Crosscat a -> Crosscat a
 cc_col_reinc col_id col view_id view Crosscat{..} =
   Crosscat cc_partition' cc_views'
     where
@@ -331,11 +331,11 @@ cc_col_reinc col_id col view_id view Crosscat{..} =
       cc_views' = M.alter view_inc view_id cc_views
       view_inc maybe_view = Just $ view_col_reinc col_id col $ fromMaybe view maybe_view
 
-cc_row_only_uninc :: RowID -> Row -> Crosscat -> Crosscat
+cc_row_only_uninc :: RowID -> Row a -> Crosscat a -> Crosscat a
 cc_row_only_uninc r_id row cc@Crosscat{cc_views = vs} = cc{cc_views = vs'}
     where vs' = M.map (view_row_only_uninc r_id row) vs
 
-cc_row_only_reinc :: RowID -> Row -> Crosscat -> Crosscat
+cc_row_only_reinc :: RowID -> Row a -> Crosscat a -> Crosscat a
 cc_row_only_reinc r_id row cc@Crosscat{cc_views = vs} = cc{cc_views = vs'}
     where vs' = M.map (view_row_only_reinc' r_id row) vs
 
@@ -355,13 +355,15 @@ per_view_alpha = 1
 per_column_hypers :: NIGNormal
 per_column_hypers = NIGNormal 1 1 1 1
 
-cc_insert_col_from_prior :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
+cc_insert_col_from_prior ::
+    forall m stats a. (Show m, Show stats, CompoundModel m stats a) =>
+    m -> ColID -> ColumnData a -> Crosscat a -> RVar (Crosscat a)
 -- This is almost the same as col_step (after unincorporation), except
 -- it ignores the likelihoods of the existing views and assigns the
 -- column according to the prior.  Up to computational efficiency, the
 -- effect of inserting with the likelihoods can be recovered by
 -- postcomposing this with col_step.
-cc_insert_col_from_prior col_id d cc@Crosscat{..} = do
+cc_insert_col_from_prior hypers col_id d cc@Crosscat{..} = do
   -- TODO Can we avoid sampling a candidate view if the column gets
   -- added to an existing view?  Will laziness just do that?
   let prior_weights = crp_seq_weights cc_partition
@@ -369,7 +371,7 @@ cc_insert_col_from_prior col_id d cc@Crosscat{..} = do
   candidate_view <- view_empty new_crp row_ids
   let view = fromMaybe candidate_view $ M.lookup view_id cc_views
       new_col = repartition (crp_seq_results $ view_partition view) d
-              $ Column per_column_hypers undefined
+              $ Column hypers undefined
   return $ cc_col_reinc col_id new_col view_id view cc
   where
     new_crp = (CRP (ClusterID 0) per_view_alpha)
@@ -378,6 +380,7 @@ cc_insert_col_from_prior col_id d cc@Crosscat{..} = do
 cc_alpha :: Double -- TODO Will want to define a prior and do inference
 cc_alpha = 1
 
-cc_initialize :: M.Map ColID (ColumnData Double) -> RVar Crosscat
-cc_initialize ds = foldM (flip $ uncurry cc_insert_col_from_prior) cc $ M.toList ds where
+cc_initialize :: M.Map ColID (ColumnData Double) -> RVar (Crosscat Double)
+cc_initialize ds = foldM add_col cc $ M.toList ds where
     cc = cc_empty $ CRP (ViewID 0) cc_alpha
+    add_col = flip $ uncurry (cc_insert_col_from_prior per_column_hypers)

@@ -105,7 +105,7 @@ Things to do (+ bullet means "done"):
         - Do I need to define an unboxed vector instance for it?
     - The above will be annoying anyway, because I will need to change
       everything to Maybe Double to deal with missing data
-- Local problem: migrating to GHC 7.10 with Stack changes the values
++ Local problem: migrating to GHC 7.10 with Stack changes the values
   that come out of the prng, spuriously breaking the test suite.
   + Plan: Define a test helper named "stable :: (Show a) => FilePath -> a -> IO Bool"
     that shows the given a and tries to compare the result to what's
