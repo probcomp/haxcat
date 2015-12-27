@@ -54,7 +54,7 @@ bogodata2 rows cols = do
   new_rows <- replicateM rows (cc_sample cc)
   return $ reshape new_rows
       where
-        reshape :: [Row] -> (M.Map ColID (ColumnData Double))
+        reshape :: [Row Double] -> (M.Map ColID (ColumnData Double))
         reshape rows = M.fromList $ map (pick rows) $ map ColID [0..cols-1]
         pick rows col_id = (col_id, V.fromList $ map (lookup col_id) rows)
         lookup col_id (Row _ cell) = fromJust $ cell col_id
@@ -91,7 +91,7 @@ instance (Ord v, Show v) => StructureCheckable (CRPSequence k v) where
              ]
         where cts = counts_agree_with_partition crp_seq_counts crp_seq_results
 
-instance StructureCheckable View where
+instance StructureCheckable (View a) where
     structure_test View {..} =
         test [ ("partition" ~: structure_test view_partition)
              , ("clusters agree with partition" ~: right_clusters)
@@ -106,7 +106,7 @@ counts_agree_with_partition ::
 counts_agree_with_partition cs part =
     counts_to_asc_list cs ~?= (sort $ M.elems part)
 
-instance StructureCheckable Crosscat where
+instance StructureCheckable (Crosscat a) where
     structure_test Crosscat {..} =
         test [ ("partition" ~: structure_test cc_partition)
              , ("views" ~: views_ok)
