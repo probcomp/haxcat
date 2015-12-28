@@ -62,23 +62,23 @@ import Types
 --   and (copies of?) the hyper parameters, which they resample
 --   e.g. when the column is reassigned.
 
-column_full_pdf :: PDF Column
+column_full_pdf :: PDF (Column a)
 column_full_pdf (Column hypers suff_stats) = product marginals where
     marginals = zipWith pdf_marginal (repeat hypers) $ M.elems suff_stats
 
-col_likelihood :: ColumnData Double -> Column -> View -> Log Double
+col_likelihood :: ColumnData a -> Column a -> View a -> Log Double
 col_likelihood d col View{..} =
     column_full_pdf $ repartition (crp_seq_results view_partition) d col
 
-col_step :: ColID -> ColumnData Double -> Crosscat -> RVar Crosscat
+col_step :: ColID -> ColumnData a -> Crosscat a -> RVar (Crosscat a)
 col_step col_id d cc@Crosscat{cc_views = old_view_set} = do
     -- TODO This will propose singleton views even if the column is
     -- already in a singleton view
     let cc'@Crosscat {..} = cc_col_uninc col_id cc
     candidate_view <- view_empty new_crp row_ids
-    let view_for :: ViewID -> View
+    let -- view_for :: ViewID -> View a  (same a)
         view_for v_id = fromMaybe candidate_view $ M.lookup v_id old_view_set
-        likelihood :: (Double, ViewID) -> ((ViewID, Column), Log Double)
+        -- likelihood :: (Double, ViewID) -> ((ViewID, Column a), Log Double)  (same a)
         likelihood (w, v_id) = ((v_id, new_col), (column_full_pdf new_col) * log_domain w)
               where new_col = repartition part d col
                     part = crp_seq_results $ view_partition $ view_for v_id
@@ -91,5 +91,5 @@ col_step col_id d cc@Crosscat{cc_views = old_view_set} = do
           new_crp = (CRP (ClusterID 0) per_view_alpha)
           row_ids = map RowID [0..V.length d - 1]
 
-col_sweep :: M.Map ColID (ColumnData Double) -> Crosscat -> RVar Crosscat
+col_sweep :: M.Map ColID (ColumnData a) -> Crosscat a -> RVar (Crosscat a)
 col_sweep ds cc = foldM (flip $ uncurry col_step) cc $ M.toList ds

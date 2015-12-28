@@ -40,30 +40,30 @@ sampleIO = sampleRVar
 fixed :: Int -> RVar a -> a
 fixed k var = evalState (sampleRVar var) (mkStdGen k)
 
-bogogen :: RVar (Crosscat, Row)
+bogogen :: RVar (Crosscat Double, Row Double)
 bogogen = do
   ds <- bogodata2 5 3
   cc <- train ds 5
   row <- cc_sample cc
   return (cc, row)
 
-bogo_cc_row :: (Crosscat, Row)
+bogo_cc_row :: (Crosscat Double, Row Double)
 bogo_cc_row = fixed 0 bogogen
 
-bogo_cc :: Crosscat
+bogo_cc :: Crosscat Double
 bogo_cc = fst bogo_cc_row
 
-bogo_row :: Row
+bogo_row :: Row Double
 bogo_row = snd bogo_cc_row
 
-geweke_gen :: RVar [Crosscat]
+geweke_gen :: RVar [Crosscat Double]
 geweke_gen = cc_geweke_chain_instrumented
              [RowID 0, RowID 1] [ColID 0, ColID 1] id 3
 
-geweke_gen_2 :: RVar Crosscat
+geweke_gen_2 :: RVar (Crosscat Double)
 geweke_gen_2 = cc_geweke_chain [RowID 0, RowID 1] [ColID 0, ColID 1] 5
 
-prior_gen_2 :: RVar Crosscat
+prior_gen_2 :: RVar (Crosscat Double)
 prior_gen_2 = cc_predict_full [ColID 0, ColID 1] [RowID 0, RowID 1]
 
 agreement :: RVar Double

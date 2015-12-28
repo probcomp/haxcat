@@ -105,7 +105,7 @@ Things to do (+ bullet means "done"):
         - Do I need to define an unboxed vector instance for it?
     - The above will be annoying anyway, because I will need to change
       everything to Maybe Double to deal with missing data
-- Local problem: migrating to GHC 7.10 with Stack changes the values
++ Local problem: migrating to GHC 7.10 with Stack changes the values
   that come out of the prng, spuriously breaking the test suite.
   + Plan: Define a test helper named "stable :: (Show a) => FilePath -> a -> IO Bool"
     that shows the given a and tries to compare the result to what's
@@ -117,8 +117,16 @@ Things to do (+ bullet means "done"):
     puts into the failure message that this is a golden file test, and
     not to read the details of the difference too closely.  The name
     would be useful too.
+- I should probably pin down the Query module a little by making a
+  unit test that it can produce a plot on demand.
 - Candidate plan for dynamically-typed crosscat:
-  - Parameterize the column store (and everything) by the cell type
+  + Parameterize the column store (and everything) by the cell type
+  - Bug:
+    - Predictive.cc_predict_full does not synthesize column hyper
+      parameters (how can it?), and thus does not put any columns into
+      the views -- just invents a column partition
+    - Consequently, cc_predict emits an empty row
+    - Consequently, cc_geweke_step doesn't do anything
   - Define a combinator on Models that accepts an Iso a b and converts
     a Model on a into a Model on b
     - Option: an Iso would have to error out on inappropriate

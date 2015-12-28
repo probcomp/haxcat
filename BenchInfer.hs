@@ -25,13 +25,13 @@ import Types
 import Haxcat
 import TestUtils
 
-bogogen :: RVar Crosscat
+bogogen :: RVar (Crosscat Double)
 bogogen = do
   ds <- bogodata2 300 23
   cc <- train ds 15
   return cc
 
-bogo_cc :: Crosscat
+bogo_cc :: Crosscat Double
 bogo_cc = evalState (sampleRVar bogogen) (mkStdGen 0)
 
 main :: IO ()
