@@ -80,7 +80,9 @@ tests = test [ structure_test bogo_cc
              , True ~=? 0.0 < bogo_predictive
              , True ~=? bogo_predictive < 0.1
              , test $ stable "test/golden/bogo_predictive" bogo_predictive
-             , test $ stable "test/golden/geweken_gen" (fixed 0 geweke_gen)
+             , test $ stable "test/golden/geweke_gen" bogo_geweke_cc
+             , 2 ~=? length bogo_geweke_row
+             , test $ stable "test/golden/geweke_gen_row" bogo_geweke_row
              , True ~=? 0.1 < fixed_agreement
              , test $ stable "test/golden/fixed_agreement" fixed_agreement
              , True ~=? 0 < bogo_kl
@@ -94,6 +96,9 @@ tests = test [ structure_test bogo_cc
           fixed_agreement = fixed 0 agreement
           bogo_kl = fixed 0 $ estimate_KL_ta two_modes two_modes_ta 300 600
           bogo_dpmm_kl = fixed 0 $ measure_dpmm_kl two_modes 300 20 10 500
+          bogo_geweke_cc = fixed 0 geweke_gen
+          bogo_geweke_row = row_to_map $ fst
+                            $ fixed 0 (geweke_gen_2 >>= (cc_predict (RowID 0)))
 
 main :: IO ()
 main = do
