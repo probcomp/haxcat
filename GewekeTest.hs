@@ -14,6 +14,7 @@
 --   See the License for the specific language governing permissions and
 --   limitations under the License.
 
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module GewekeTest where
@@ -23,6 +24,7 @@ import qualified Data.Map as M
 import Data.Maybe (fromJust)
 import Data.Random
 
+import Models
 import Types
 import RowSweep (row_major_to_column_major)
 import Predictive
@@ -49,13 +51,16 @@ cc_sample_many :: [RowID] -> Crosscat a -> RVar [Row a]
 cc_sample_many rows cc = evalStateT act cc where
     act = mapM (\r_id -> StateT $ cc_predict r_id) rows
 
-cc_geweke_chain :: [RowID] -> [ColID] -> Int -> RVar (Crosscat a)
+cc_geweke_chain ::
+    forall m stats a. (Show m, Show stats, CompoundModel m stats a) =>
+    [RowID] -> M.Map ColID m -> Int -> RVar (Crosscat a)
 cc_geweke_chain rows cols k = chain init step k where
     init = cc_predict_full cols rows
     step = (cc_geweke_step rows)
 
 cc_geweke_chain_instrumented ::
-  [RowID] -> [ColID] -> (Crosscat b -> a) -> Int -> RVar [a]
+    forall m stats a b. (Show m, Show stats, CompoundModel m stats b) =>
+    [RowID] -> M.Map ColID m -> (Crosscat b -> a) -> Int -> RVar [a]
 cc_geweke_chain_instrumented rows cols probe k =
   instrumented_chain init (cc_geweke_step rows) probe k where
     init = cc_predict_full cols rows

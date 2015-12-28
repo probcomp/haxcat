@@ -331,6 +331,19 @@ cc_col_reinc col_id col view_id view Crosscat{..} =
       cc_views' = M.alter view_inc view_id cc_views
       view_inc maybe_view = Just $ view_col_reinc col_id col $ fromMaybe view maybe_view
 
+-- - Assume this ColID has already been assigned a view id and
+--   incorporated (contrast previous).
+-- - ASSUME the column is already correctly partitioned according to
+--   the view.
+-- - Do not pass a View object; assume there is always one there at the ColID.
+cc_col_only_reinc :: ColID -> Column a -> Crosscat a -> Crosscat a
+cc_col_only_reinc col_id col Crosscat{..} =
+  Crosscat cc_partition cc_views'
+    where
+      view_id = fromJust $ crp_seq_lookup col_id cc_partition
+      cc_views' = M.alter view_inc view_id cc_views
+      view_inc maybe_view = Just $ view_col_reinc col_id col $ fromJust maybe_view
+
 cc_row_only_uninc :: RowID -> Row a -> Crosscat a -> Crosscat a
 cc_row_only_uninc r_id row cc@Crosscat{cc_views = vs} = cc{cc_views = vs'}
     where vs' = M.map (view_row_only_uninc r_id row) vs

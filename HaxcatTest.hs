@@ -26,6 +26,7 @@ import Data.Random
 import Data.RVar (sampleRVar)
 import System.Random
 
+import Models
 import Types
 import Haxcat
 import TestUtils
@@ -56,15 +57,18 @@ bogo_cc = fst bogo_cc_row
 bogo_row :: Row Double
 bogo_row = snd bogo_cc_row
 
+two_columns :: M.Map ColID NIGNormal
+two_columns = M.fromList [(ColID 0, per_column_hypers), (ColID 1, per_column_hypers)]
+
 geweke_gen :: RVar [Crosscat Double]
 geweke_gen = cc_geweke_chain_instrumented
-             [RowID 0, RowID 1] [ColID 0, ColID 1] id 3
+             [RowID 0, RowID 1] two_columns id 3
 
 geweke_gen_2 :: RVar (Crosscat Double)
-geweke_gen_2 = cc_geweke_chain [RowID 0, RowID 1] [ColID 0, ColID 1] 5
+geweke_gen_2 = cc_geweke_chain [RowID 0, RowID 1] two_columns 5
 
 prior_gen_2 :: RVar (Crosscat Double)
-prior_gen_2 = cc_predict_full [ColID 0, ColID 1] [RowID 0, RowID 1]
+prior_gen_2 = cc_predict_full two_columns [RowID 0, RowID 1]
 
 agreement :: RVar Double
 agreement = do

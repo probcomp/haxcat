@@ -14,6 +14,7 @@
 --   See the License for the specific language governing permissions and
 --   limitations under the License.
 
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Predictive where
@@ -22,7 +23,7 @@ import Prelude hiding (mapM)
 
 import Control.Monad hiding (mapM)
 import qualified Data.Map as M
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Random.RVar
 import Data.Traversable
 
@@ -83,9 +84,19 @@ cc_pdf_predictive Crosscat{..} row =
     -- shouldn't?)
     product $ map (flip view_pdf_predictive row) $ M.elems cc_views
 
-cc_predict_full :: [ColID] -> [RowID] -> RVar (Crosscat a)
+cc_predict_full ::
+    forall m stats a. (Show m, Show stats, CompoundModel m stats a) =>
+    M.Map ColID m -> [RowID] -> RVar (Crosscat a)
 cc_predict_full cols rows = do
-  partition <- crp_seq_empty (CRP (ViewID 0) cc_alpha) cols
+  partition <- crp_seq_empty (CRP (ViewID 0) cc_alpha) $ M.keys cols
   views <- mapM mk_view $ crp_seq_values partition
-  return $ Crosscat partition $ M.fromList $ zip (crp_seq_values partition) views
+  let no_columns = Crosscat partition $ M.fromList $ zip (crp_seq_values partition) views
+  return $ M.foldrWithKey add_col no_columns cols
     where mk_view _ = view_empty (CRP (ClusterID 0) per_view_alpha) rows
+          add_col col_id model cc = cc_col_only_reinc col_id column cc
+              where
+                view_id = fromJust $ view_id_for cc col_id
+                view = fromJust $ M.lookup view_id $ cc_views cc
+                clusters = crp_seq_values $ view_partition view
+                cluster_stats = map (\_ -> empty) clusters
+                column = Column model $ M.fromList $ zip clusters cluster_stats
