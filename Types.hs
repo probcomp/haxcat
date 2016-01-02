@@ -341,8 +341,8 @@ cc_col_only_reinc col_id col Crosscat{..} =
   Crosscat cc_partition cc_views'
     where
       view_id = fromJust $ crp_seq_lookup col_id cc_partition
-      cc_views' = M.alter view_inc view_id cc_views
-      view_inc maybe_view = Just $ view_col_reinc col_id col $ fromJust maybe_view
+      cc_views' = M.adjust view_inc view_id cc_views
+      view_inc = view_col_reinc col_id col
 
 cc_row_only_uninc :: RowID -> Row a -> Crosscat a -> Crosscat a
 cc_row_only_uninc r_id row cc@Crosscat{cc_views = vs} = cc{cc_views = vs'}
