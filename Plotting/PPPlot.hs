@@ -74,7 +74,8 @@ deduplicate xs = concatMap annotate $ group $ sort xs where
         where len = fromIntegral $ length same_xs
 
 data Plottable a = Empirical String [a]
-                 | Analytic String (CDF a)
+                 | Discrete String (MassiveCDF a)
+                 | Continuous String (CDF a)
 
 p_p_plot :: (Ord a) => Plottable a -> Plottable a -> EC (Layout Double Double) ()
 p_p_plot pl1 pl2 = do
@@ -85,11 +86,14 @@ p_p_plot pl1 pl2 = do
           xs2e = deduplicate $ sample pl2
           describe (Empirical name xs) = "Probability of " ++ name ++
               " (" ++ (show $ length xs) ++ " samples)"
-          describe (Analytic name _) = "Probability of " ++ name
+          describe (Discrete name _) = "Probability of " ++ name
+          describe (Continuous name _) = "Probability of " ++ name
           sample (Empirical _ xs) = xs
-          sample (Analytic _ _) = []
+          sample (Discrete _ _) = []
+          sample (Continuous _ _) = []
           cdf_of (Empirical _ xs) = expand_state_space $ empirical_cdf xs
-          cdf_of (Analytic _ cdf) = expand_state_space $ massless cdf
+          cdf_of (Discrete _ cdf) = expand_state_space $ cdf
+          cdf_of (Continuous _ cdf) = expand_state_space $ massless cdf
 
 -- import Graphics.Rendering.Chart.Gtk
 -- toWindow 300 300 $ p_p_plot [1,2,3] [2,3,4]
