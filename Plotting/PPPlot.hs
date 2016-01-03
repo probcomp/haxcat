@@ -77,12 +77,13 @@ data Plottable a = Empirical String [a]
                  | Discrete String (MassiveCDF a)
                  | Continuous String (CDF a)
 
-p_p_plot :: (Ord a) => Plottable a -> Plottable a -> EC (Layout Double Double) ()
-p_p_plot pl1 pl2 = do
-  plot_scatter $ compute_points (sort $ xs1e ++ xs2e) (cdf_of pl1) (cdf_of pl2)
+p_p_plot_with :: (Ord a) => [a] -> Plottable a -> Plottable a -> EC (Layout Double Double) ()
+p_p_plot_with extra pl1 pl2 = do
+  plot_scatter $ compute_points (sort $ extrae ++ xs1e ++ xs2e) (cdf_of pl1) (cdf_of pl2)
   layout_x_axis . laxis_title .= describe pl1
   layout_y_axis . laxis_title .= describe pl2
-    where xs1e = deduplicate $ sample pl1
+    where extrae = map (\x -> Expanded x 0.5) extra
+          xs1e = deduplicate $ sample pl1
           xs2e = deduplicate $ sample pl2
           describe (Empirical name xs) = "Probability of " ++ name ++
               " (" ++ (show $ length xs) ++ " samples)"
@@ -94,6 +95,9 @@ p_p_plot pl1 pl2 = do
           cdf_of (Empirical _ xs) = expand_state_space $ empirical_cdf xs
           cdf_of (Discrete _ cdf) = expand_state_space $ cdf
           cdf_of (Continuous _ cdf) = expand_state_space $ massless cdf
+
+p_p_plot :: (Ord a) => Plottable a -> Plottable a -> EC (Layout Double Double) ()
+p_p_plot = p_p_plot_with []
 
 -- import Graphics.Rendering.Chart.Gtk
 -- toWindow 300 300 $ p_p_plot [1,2,3] [2,3,4]
