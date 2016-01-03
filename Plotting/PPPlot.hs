@@ -2,8 +2,6 @@ module Plotting.PPPlot where
 
 import Data.List (group, sort)
 import Graphics.Rendering.Chart.Easy
-import Graphics.Rendering.Chart.Gtk
-import Graphics.Rendering.Chart.Backend.Cairo
 
 -- Points suitable for the scatter plot portion of a two-sample P-P plot.
 newtype PPScatter = PPScatter [(Double, Double)]
@@ -42,5 +40,7 @@ p_p_plot (name1, d1) (name2, d2) = do
     where describe name xs = "Probability of " ++ name ++
                              " (" ++ (show $ length xs) ++ " samples)"
 
+-- import Graphics.Rendering.Chart.Gtk
 -- toWindow 300 300 $ p_p_plot [1,2,3] [2,3,4]
+-- import Graphics.Rendering.Chart.Backend.Cairo
 -- toFile def "example-p-p.png" $ p_p_plot [1,2,3] [2,3,4]
