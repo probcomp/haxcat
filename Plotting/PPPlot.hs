@@ -6,9 +6,16 @@ import Data.List (group, sort)
 import qualified Data.Map.Strict as M
 import Graphics.Rendering.Chart.Easy
 
--- A "massive" cdf is a function that returns a pair: the probability
--- mass up to a, exclusive, and the mass of a itself.
+-- A "massive" cumulative distribution function is a function that
+-- returns a pair: the probability mass up to a, exclusive, and the
+-- mass of a itself.
 type MassiveCDF a = a -> (Double, Double)
+
+-- Cumulative distribution function: return the mass below a.  The
+-- implication is that the probability mass at a is always 0, so there
+-- is no difference between treating "below" exclusively or
+-- inclusively.  Compare MassiveCDF.
+type CDF a = a -> Double
 
 empirical_cdf :: forall a. (Ord a) => [a] -> MassiveCDF a
 empirical_cdf xs = lookup where
@@ -26,6 +33,23 @@ empirical_cdf xs = lookup where
                                               else
                                                   (below + there, 0)
                  Nothing -> (0, 0)
+
+-- Expanded state space for eliminating duplications in discrete
+-- distributions.  The idea is to pretend that every value of type a
+-- has an infinitesimal 0-1 interval attached to it.
+data Expanded a = Expanded a Double
+    deriving Eq
+
+instance (Ord a) => Ord (Expanded a) where
+    (Expanded x xinf) `compare` (Expanded y yinf) =
+        case x `compare` y of
+          LT -> LT
+          GT -> GT
+          EQ -> xinf `compare` yinf
+
+expand_state_space :: MassiveCDF a -> CDF (Expanded a)
+expand_state_space mcdf (Expanded x portion) = below + here * portion where
+    (below, here) = mcdf x
 
 -- Points suitable for the scatter plot portion of a two-sample P-P plot.
 newtype PPScatter = PPScatter [(Double, Double)]
