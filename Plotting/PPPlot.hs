@@ -1,6 +1,6 @@
 module Plotting.PPPlot where
 
-import Data.List (sort)
+import Data.List (group, sort)
 import Graphics.Rendering.Chart.Easy
 import Graphics.Rendering.Chart.Gtk
 import Graphics.Rendering.Chart.Backend.Cairo
@@ -29,9 +29,14 @@ plot_scatter (PPScatter pts) = do
   plot $ line "equality line" [[(0,0),(1,1)]]
   plot $ points "observed" pts
 
+deduplicate :: (Ord a) => [a] -> [(a, Double)]
+deduplicate xs = concatMap annotate $ group $ sort xs where
+    annotate same_xs = [(x, i/len) | (x,i) <- zip same_xs [1..]]
+        where len = fromIntegral $ length same_xs
+
 p_p_plot :: (Ord a) => (String, [a]) -> (String, [a]) -> EC (Layout Double Double) ()
 p_p_plot (name1, d1) (name2, d2) = do
-  plot_scatter $ compute_points d1 d2
+  plot_scatter $ compute_points (deduplicate d1) (deduplicate d2)
   layout_x_axis . laxis_title .= "Probability of " ++ name1
   layout_y_axis . laxis_title .= "Probability of " ++ name2
 
