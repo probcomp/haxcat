@@ -37,8 +37,10 @@ deduplicate xs = concatMap annotate $ group $ sort xs where
 p_p_plot :: (Ord a) => (String, [a]) -> (String, [a]) -> EC (Layout Double Double) ()
 p_p_plot (name1, d1) (name2, d2) = do
   plot_scatter $ compute_points (deduplicate d1) (deduplicate d2)
-  layout_x_axis . laxis_title .= "Probability of " ++ name1
-  layout_y_axis . laxis_title .= "Probability of " ++ name2
+  layout_x_axis . laxis_title .= describe name1 d1
+  layout_y_axis . laxis_title .= describe name2 d2
+    where describe name xs = "Probability of " ++ name ++
+                             " (" ++ (show $ length xs) ++ " samples)"
 
 -- toWindow 300 300 $ p_p_plot [1,2,3] [2,3,4]
 -- toFile def "example-p-p.png" $ p_p_plot [1,2,3] [2,3,4]
