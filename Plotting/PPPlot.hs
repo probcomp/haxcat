@@ -55,18 +55,8 @@ expand_state_space mcdf (Expanded x portion) = below + here * portion where
 newtype PPScatter = PPScatter [(Double, Double)]
     deriving Show
 
-compute_points :: (Ord a) => [a] -> [a] -> PPScatter
-compute_points d1 d2 = PPScatter $ go (sort d1) (sort d2) 0 0 where
-    step1 = 1.0 / fromIntegral (length d1)
-    step2 = 1.0 / fromIntegral (length d2)
-    go [] [] _ _ = [(1.0, 1.0)]
-    go [] (_:xs2) amt1 amt2 = (amt1, amt2):go [] xs2 amt1 (amt2 + step2)
-    go (_:xs1) [] amt1 amt2 = (amt1, amt2):go xs1 [] (amt1 + step1) amt2
-    go all1@(x1:xs1) all2@(x2:xs2) amt1 amt2
-        = case x1 `compare` x2 of
-            LT -> (amt1, amt2):go xs1 all2 (amt1 + step1) amt2
-            GT -> (amt1, amt2):go all1 xs2 amt1 (amt2 + step2)
-            EQ -> (amt1, amt2):go xs1 xs2 (amt1 + step1) (amt2 + step2)
+compute_points :: (Ord a) => [a] -> CDF a -> CDF a -> PPScatter
+compute_points xs cdf1 cdf2 = PPScatter $ [(cdf1 x, cdf2 x) | x <- xs]
 
 plot_scatter :: PPScatter -> EC (Layout Double Double) ()
 plot_scatter (PPScatter pts) = do
@@ -75,17 +65,21 @@ plot_scatter (PPScatter pts) = do
   plot $ line "equality line" [[(0,0),(1,1)]]
   plot $ points "observed" pts
 
-deduplicate :: (Ord a) => [a] -> [(a, Double)]
+deduplicate :: (Ord a) => [a] -> [Expanded a]
 deduplicate xs = concatMap annotate $ group $ sort xs where
-    annotate same_xs = [(x, i/len) | (x,i) <- zip same_xs [1..]]
+    annotate same_xs = [Expanded x (i/len) | (x,i) <- zip same_xs [1..]]
         where len = fromIntegral $ length same_xs
 
 p_p_plot :: (Ord a) => (String, [a]) -> (String, [a]) -> EC (Layout Double Double) ()
 p_p_plot (name1, d1) (name2, d2) = do
-  plot_scatter $ compute_points (deduplicate d1) (deduplicate d2)
+  plot_scatter $ compute_points (sort $ d1e ++ d2e) d1cdf d2cdf
   layout_x_axis . laxis_title .= describe name1 d1
   layout_y_axis . laxis_title .= describe name2 d2
-    where describe name xs = "Probability of " ++ name ++
+    where d1cdf = expand_state_space $ empirical_cdf d1
+          d2cdf = expand_state_space $ empirical_cdf d2
+          d1e = deduplicate d1
+          d2e = deduplicate d2
+          describe name xs = "Probability of " ++ name ++
                              " (" ++ (show $ length xs) ++ " samples)"
 
 -- import Graphics.Rendering.Chart.Gtk
