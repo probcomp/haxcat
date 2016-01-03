@@ -81,7 +81,7 @@ chi_square_stat data1 data2 = (stat, dof) where
     buckets = pair_with_defaults 0 0 cts1 cts2
     bucket_contrib (ct1, ct2) = (k1 * ct1 - k2 * ct2) ** 2 / (ct1 + ct2)
     stat = sum $ M.elems $ M.map bucket_contrib buckets
-    dof = M.size buckets
+    dof = M.size buckets - 1
 
 pair_with_defaults :: (Ord k) => v1 -> v2
                    -> M.Map k v1 -> M.Map k v2 -> M.Map k (v1, v2)
