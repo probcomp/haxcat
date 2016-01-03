@@ -21,7 +21,9 @@ library
                        math-functions, mtl, rvar,
                        log-domain, vector,
                        -- For the plotting stub
-                       process
+                       process,
+                       -- For plotting with Chart
+                       Chart, Chart-cairo, Chart-gtk
                        -- Statically typed option for csv parsing
                        -- Frames, pipes, vinyl
   other-modules:       ColumnSweep, Models, RowSweep, Types, Utils
