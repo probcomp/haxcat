@@ -35,6 +35,9 @@ import GewekeTest
 import ChiSquare
 import DPMMTest
 
+import Plotting.PPPlot
+import Graphics.Rendering.Chart.Gtk
+
 sampleIO :: RVar a -> IO a
 sampleIO = sampleRVar
 
@@ -57,24 +60,33 @@ bogo_cc = fst bogo_cc_row
 bogo_row :: Row Double
 bogo_row = snd bogo_cc_row
 
-two_columns :: M.Map ColID NIGNormal
-two_columns = M.fromList [(ColID 0, per_column_hypers), (ColID 1, per_column_hypers)]
+columns :: Int -> M.Map ColID NIGNormal
+columns k = M.fromList $ map col $ [0..k-1] where
+    col i = (ColID i, per_column_hypers)
 
 geweke_gen :: RVar [Crosscat Double]
 geweke_gen = cc_geweke_chain_instrumented
-             [RowID 0, RowID 1] two_columns id 3
+             [RowID 0, RowID 1] (columns 2) id 3
 
 geweke_gen_2 :: RVar (Crosscat Double)
-geweke_gen_2 = cc_geweke_chain [RowID 0, RowID 1] two_columns 5
+geweke_gen_2 = cc_geweke_chain [RowID 0, RowID 1, RowID 2] (columns 10) 5
 
 prior_gen_2 :: RVar (Crosscat Double)
-prior_gen_2 = cc_predict_full two_columns [RowID 0, RowID 1]
+prior_gen_2 = cc_predict_full (columns 10) [RowID 0, RowID 1, RowID 2]
 
 agreement :: RVar Double
 agreement = do
   prior <- replicateM 500 $ liftM view_count prior_gen_2
   geweke <- replicateM 100 $ liftM view_count geweke_gen_2
   return $ chi_square_p prior geweke
+
+-- TODO Is there a good way to mechanize making plots like this for
+-- statistical tests?  Compare `agreement`.
+debug_agreement :: IO ()
+debug_agreement = do
+  prior <- Main.sampleIO $ replicateM 500 $ liftM view_count prior_gen_2
+  geweke <- Main.sampleIO $ replicateM 100 $ liftM view_count geweke_gen_2
+  toWindow 300 300 $ p_p_plot (Empirical "prior" prior) (Empirical "geweke" geweke)
 
 tests :: Test
 tests = test [ structure_test bogo_cc

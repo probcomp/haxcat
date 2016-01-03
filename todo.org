@@ -79,10 +79,9 @@ Things to do (+ bullet means "done"):
   + Draw a dependence probability heatmap for 1 cc on synthetic data
   + Generalize to several ccs
 - Path 2:
-  - Write a Chart program that draws the plot(s) I want to see for
-    Chi^2 evidence
   + Write a Chart program for p-p plots
-  - Use it to (unit) test my Chi^2 method
+  + Use it to manually unit test my Chi^2 method
+  + Use it to sanity-check my Chi^2 test in the test suite
   - [Option] think about a statistical (probabilistic) unit testing
     framework that displays evidence plots selectively
 - Benefit: benchmark inference vs crosscat on synthetic data n x m

@@ -37,7 +37,9 @@ Test-suite tests
                        math-functions, mtl, rvar,
                        log-domain, vector, HUnit, random,
                        -- For saving golden files
-                       directory, filepath
+                       directory, filepath,
+                       -- For plotting with Chart
+                       Chart, Chart-cairo, Chart-gtk
   other-modules:       ChiSquare, ColumnSweep, DPMM, DPMMTest, GewekeTest,
                        Haxcat, Models, Predictive, RowSweep,
                        TestUtils, Types, Utils
