@@ -1,7 +1,31 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Plotting.PPPlot where
 
 import Data.List (group, sort)
+import qualified Data.Map.Strict as M
 import Graphics.Rendering.Chart.Easy
+
+-- A "massive" cdf is a function that returns a pair: the probability
+-- mass up to a, exclusive, and the mass of a itself.
+type MassiveCDF a = a -> (Double, Double)
+
+empirical_cdf :: forall a. (Ord a) => [a] -> MassiveCDF a
+empirical_cdf xs = lookup where
+    tree = fst $ foldl add (M.empty, 0) $ group $ sort xs
+    add :: (M.Map a (Double, Double), Double) -> [a] ->
+           (M.Map a (Double, Double), Double)
+    add (m, tot) same_xs = (m', tot') where
+        m' = M.insert (head same_xs) (tot, here) m
+        tot' = tot + here
+        here = (fromIntegral $ length same_xs) / n
+    n = fromIntegral $ length xs
+    lookup x = case M.lookupLE x tree of
+                 Just (x', (below, there)) -> if x == x' then
+                                                  (below, there)
+                                              else
+                                                  (below + there, 0)
+                 Nothing -> (0, 0)
 
 -- Points suitable for the scatter plot portion of a two-sample P-P plot.
 newtype PPScatter = PPScatter [(Double, Double)]

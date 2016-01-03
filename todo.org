@@ -81,6 +81,7 @@ Things to do (+ bullet means "done"):
 - Path 2:
   - Write a Chart program that draws the plot(s) I want to see for
     Chi^2 evidence
+  + Write a Chart program for p-p plots
   - Use it to (unit) test my Chi^2 method
   - [Option] think about a statistical (probabilistic) unit testing
     framework that displays evidence plots selectively
