@@ -121,12 +121,20 @@ Things to do (+ bullet means "done"):
   unit test that it can produce a plot on demand.
 - Candidate plan for dynamically-typed crosscat:
   + Parameterize the column store (and everything) by the cell type
-  - Bug:
+  + Bug:
     - Predictive.cc_predict_full does not synthesize column hyper
       parameters (how can it?), and thus does not put any columns into
       the views -- just invents a column partition
     - Consequently, cc_predict emits an empty row
     - Consequently, cc_geweke_step doesn't do anything
+  + Fixed
+  - Oddity: the Geweke chain may be clustering predicted row values
+    much closer to zero than the prior?
+    - Suspicious due to varying the seed and the number of Geweke
+      iterates and eyeballing the samples that emerged
+    - Look at a p-p plot of prior vs Geweke simulation of data values
+      (will test my NIGNormal implementation)
+      - With or without distractor rows and columns?
   - Define a combinator on Models that accepts an Iso a b and converts
     a Model on a into a Model on b
     - Option: an Iso would have to error out on inappropriate
