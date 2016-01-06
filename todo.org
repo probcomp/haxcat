@@ -82,6 +82,11 @@ Things to do (+ bullet means "done"):
   + Write a Chart program for p-p plots
   + Use it to manually unit test my Chi^2 method
   + Use it to sanity-check my Chi^2 test in the test suite
+  - Can also augment p-p plots with comparative histograms
+    - the Bars plot type should be helpful
+      - If you do your own binning; PlotHist has the advantage of auto-binning
+  - Implement the K-S test and mechanically unit test that my chi^2
+    p-values are uniformly distributed.
   - [Option] think about a statistical (probabilistic) unit testing
     framework that displays evidence plots selectively
 - Benefit: benchmark inference vs crosscat on synthetic data n x m
