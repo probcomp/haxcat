@@ -68,37 +68,32 @@ geweke_gen :: RVar [Crosscat Double]
 geweke_gen = cc_geweke_chain_instrumented
              [RowID 0, RowID 1] (columns 2) id 3
 
-geweke_gen_2 :: RVar (Crosscat Double)
-geweke_gen_2 = cc_geweke_chain [RowID 0, RowID 1, RowID 2] (columns 10) 5
+geweke_cc :: Int -> Int -> Int -> RVar (Crosscat Double)
+geweke_cc rows cols steps =
+    cc_geweke_chain (map RowID [0..rows-1]) (columns cols) steps
 
-prior_gen_2 :: RVar (Crosscat Double)
-prior_gen_2 = cc_predict_full (columns 10) [RowID 0, RowID 1, RowID 2]
+prior_cc :: Int -> Int -> RVar (Crosscat Double)
+prior_cc rows cols = cc_predict_full (columns cols) (map RowID [0..rows-1])
 
 agreement :: RVar Double
 agreement = do
-  prior <- replicateM 500 $ liftM view_count prior_gen_2
-  geweke <- replicateM 100 $ liftM view_count geweke_gen_2
+  prior <- replicateM 500 $ liftM view_count $ prior_cc 3 10
+  geweke <- replicateM 100 $ liftM view_count $ geweke_cc 3 10 5
   return $ chi_square_p prior geweke
 
 -- TODO Is there a good way to mechanize making plots like this for
 -- statistical tests?  Compare `agreement`.
 debug_agreement :: IO ()
 debug_agreement = do
-  prior <- Main.sampleIO $ replicateM 500 $ liftM view_count prior_gen_2
-  geweke <- Main.sampleIO $ replicateM 100 $ liftM view_count geweke_gen_2
+  prior <- Main.sampleIO $ replicateM 500 $ liftM view_count $ prior_cc 3 10
+  geweke <- Main.sampleIO $ replicateM 100 $ liftM view_count $ geweke_cc 3 10 5
   toWindow 300 300 $ p_p_plot (Empirical "prior" prior) (Empirical "geweke" geweke)
 
-geweke_gen_3 :: RVar (Crosscat Double)
-geweke_gen_3 = cc_geweke_chain [RowID 0] (columns 1) 25
-
-prior_gen_3 :: RVar (Crosscat Double)
-prior_gen_3 = cc_predict_full (columns 1) [RowID 0]
-
 -- TODO Encode this in a computational test?  K-S?
-debug_agreement_3 :: IO ()
-debug_agreement_3 = do
-  prior <- Main.sampleIO $ replicateM 2500 (prior_gen_3 >>= cc_sample_col (ColID 0))
-  geweke <- Main.sampleIO $ replicateM 500 (geweke_gen_3 >>= cc_sample_col (ColID 0))
+debug_agreement_2 :: IO ()
+debug_agreement_2 = do
+  prior <- Main.sampleIO $ replicateM 2500 (prior_cc 1 1 >>= cc_sample_col (ColID 0))
+  geweke <- Main.sampleIO $ replicateM 500 (geweke_cc 1 1 25 >>= cc_sample_col (ColID 0))
   toWindow 300 300 $ p_p_plot (Empirical "prior" prior) (Empirical "geweke" geweke)
 
 tests :: Test
@@ -127,7 +122,7 @@ tests = test [ structure_test bogo_cc
           bogo_dpmm_kl = fixed 0 $ measure_dpmm_kl two_modes 300 20 10 500
           bogo_geweke_cc = fixed 0 geweke_gen
           bogo_geweke_row = row_to_map $ fst
-                            $ fixed 0 (geweke_gen_2 >>= (cc_predict (RowID 0)))
+                            $ fixed 0 (geweke_cc 3 10 5 >>= (cc_predict (RowID 0)))
 
 main :: IO ()
 main = do
