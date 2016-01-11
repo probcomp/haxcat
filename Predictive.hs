@@ -64,6 +64,11 @@ cc_sample Crosscat{..} = liftM (map_to_row . M.foldl' M.union M.empty) per_view
     where
       per_view = mapM view_sample cc_views
 
+cc_sample_col :: ColID -> Crosscat a -> RVar (Maybe a)
+cc_sample_col col_id cc = do
+  (Row _ cell) <- cc_sample cc
+  return $ cell col_id
+
 cc_predict :: RowID -> Crosscat a -> RVar (Row a, Crosscat a)
 cc_predict r_id Crosscat{..} = do
   -- per_view :: M.Map ViewID (M.Map ColID Double, View a)

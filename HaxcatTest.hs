@@ -88,6 +88,19 @@ debug_agreement = do
   geweke <- Main.sampleIO $ replicateM 100 $ liftM view_count geweke_gen_2
   toWindow 300 300 $ p_p_plot (Empirical "prior" prior) (Empirical "geweke" geweke)
 
+geweke_gen_3 :: RVar (Crosscat Double)
+geweke_gen_3 = cc_geweke_chain [RowID 0] (columns 1) 25
+
+prior_gen_3 :: RVar (Crosscat Double)
+prior_gen_3 = cc_predict_full (columns 1) [RowID 0]
+
+-- TODO Encode this in a computational test?  K-S?
+debug_agreement_3 :: IO ()
+debug_agreement_3 = do
+  prior <- Main.sampleIO $ replicateM 2500 (prior_gen_3 >>= cc_sample_col (ColID 0))
+  geweke <- Main.sampleIO $ replicateM 500 (geweke_gen_3 >>= cc_sample_col (ColID 0))
+  toWindow 300 300 $ p_p_plot (Empirical "prior" prior) (Empirical "geweke" geweke)
+
 tests :: Test
 tests = test [ structure_test bogo_cc
              , test $ stable "test/golden/bogo_cc" bogo_cc
