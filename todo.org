@@ -137,9 +137,9 @@ Things to do (+ bullet means "done"):
     much closer to zero than the prior?
     - Suspicious due to varying the seed and the number of Geweke
       iterates and eyeballing the samples that emerged
-    - Look at a p-p plot of prior vs Geweke simulation of data values
+    + Look at a p-p plot of prior vs Geweke simulation of data values
       (will test my NIGNormal implementation)
-      - With or without distractor rows and columns?
+      + With and without distractor rows and columns?
   - Define a combinator on Models that accepts an Iso a b and converts
     a Model on a into a Model on b
     - Option: an Iso would have to error out on inappropriate

@@ -96,6 +96,13 @@ debug_agreement_2 = do
   geweke <- Main.sampleIO $ replicateM 500 (geweke_cc 1 1 25 >>= cc_sample_col (ColID 0))
   toWindow 300 300 $ p_p_plot (Empirical "prior" prior) (Empirical "geweke" geweke)
 
+-- TODO Encode this in a computational test?  K-S?
+debug_agreement_3 :: IO ()
+debug_agreement_3 = do
+  prior <- Main.sampleIO $ replicateM 1000 (prior_cc 2 2 >>= cc_sample_col (ColID 0))
+  geweke <- Main.sampleIO $ replicateM 1000 (geweke_cc 2 2 20 >>= cc_sample_col (ColID 0))
+  toWindow 300 300 $ p_p_plot (Empirical "prior" prior) (Empirical "geweke" geweke)
+
 tests :: Test
 tests = test [ structure_test bogo_cc
              , test $ stable "test/golden/bogo_cc" bogo_cc
