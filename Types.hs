@@ -69,31 +69,6 @@ row_to_map (Row cols cell) = M.fromAscList $ catMaybes $ map cellWithKey $ S.toA
 map_to_row :: M.Map ColID a -> Row a
 map_to_row m = Row (M.keysSet m) (flip M.lookup m)
 
-
--- Choice point: Are cluster hypers per-cluster or shared across all
--- the clusters in a column?
--- - Decision: The latter seems to make more sense to me, so I'll do that.
-data Mixture prior p_stats comp c_stats element =
-    ( CompoundModel prior p_stats ClusterID
-    , CompoundModel comp c_stats element
-    ) => Mixture { prior :: prior
-                 , p_stats :: p_stats
-                 , c_hypers :: comp
-                 , elements :: ColumnData element
-                 , assignment :: M.Map RowID ClusterID
-                 , components :: M.Map ClusterID c_stats
-                 , enumerate :: prior -> [ClusterID] -- TODO Put this in a class?
-                 }
--- INVARIANT: the p_stats have to agree with the assignment (that is,
--- the assignment must be the data set that the p_stats are the
--- statistics of).
-
-instance Model (Mixture prior p_stats comp c_stats element) element where
-    pdf mix x = undefined -- Involves cluster ids and weights, and a Log.sum
-
-    -- There is also the aggregate probability of the component
-    -- stats, which has no name in this typeclass
-
 -- A sequence of items from a CRP b, each associated with an a
 -- INVARIANT: The counts have to agree with the results.
 data CRPSequence k v = CRPSequence
