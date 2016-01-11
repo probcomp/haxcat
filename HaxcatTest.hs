@@ -97,7 +97,7 @@ tests = test [ structure_test bogo_cc
              , True ~=? bogo_predictive < 0.1
              , test $ stable "test/golden/bogo_predictive" bogo_predictive
              , test $ stable "test/golden/geweke_gen" bogo_geweke_cc
-             , 2 ~=? length bogo_geweke_row
+             , 10 ~=? length bogo_geweke_row
              , test $ stable "test/golden/geweke_gen_row" bogo_geweke_row
              , True ~=? 0.1 < fixed_agreement
              , test $ stable "test/golden/fixed_agreement" fixed_agreement
