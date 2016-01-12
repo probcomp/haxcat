@@ -44,6 +44,9 @@ choose n k = Exp $ logFactorial n - logFactorial k - logFactorial (n-k)
 log_domain :: (Floating a) => a -> Log a
 log_domain = Exp . log
 
+direct_domain :: (Floating a) => Log a -> a
+direct_domain = exp . ln
+
 beta :: Double -> Double -> Log Double
 beta a b = Exp $ logBeta a b
 
