@@ -133,13 +133,16 @@ Things to do (+ bullet means "done"):
     - Consequently, cc_predict emits an empty row
     - Consequently, cc_geweke_step doesn't do anything
   + Fixed
-  - Oddity: the Geweke chain may be clustering predicted row values
+  x Oddity: the Geweke chain may be clustering predicted row values
     much closer to zero than the prior?
     - Suspicious due to varying the seed and the number of Geweke
       iterates and eyeballing the samples that emerged
     + Look at a p-p plot of prior vs Geweke simulation of data values
       (will test my NIGNormal implementation)
       + With and without distractor rows and columns?
+  - Option: Define a test that would find a bug in the nig normal
+    implementation, e.g. too-large scale for the t-distributed sampler
+    - p-p plot of sample vs pdf
   - Define a combinator on Models that accepts an Iso a b and converts
     a Model on a into a Model on b
     - Option: an Iso would have to error out on inappropriate
