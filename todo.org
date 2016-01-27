@@ -142,7 +142,16 @@ Things to do (+ bullet means "done"):
       + With and without distractor rows and columns?
   - Option: Define a test that would find a bug in the nig normal
     implementation, e.g. too-large scale for the t-distributed sampler
-    - p-p plot of sample vs pdf
+    - Option: p-p plot of sample vs cdf.  This requires the cdf.
+      - Could add a class for that, and a cdf/pdf agreement test
+        (numerical differentiation?)
+    - Option: Try to compare the empirical pdf to the true pdf
+      somehow, maybe by an analog of the p-p plot.
+    - Option: Instead compare NIG normal to the uncollapsed /
+      non-conjugate version, per the Venture conjugate testing
+      strategy.
+    - Option: Instead compare NIG normal to Venture's better tested
+      NIG normal (how?)
   - Define a combinator on Models that accepts an Iso a b and converts
     a Model on a into a Model on b
     - Option: an Iso would have to error out on inappropriate
