@@ -17,6 +17,10 @@ type MassiveCDF a = a -> (Double, Double)
 -- inclusively.  Compare MassiveCDF.
 type CDF a = a -> Double
 
+-- Note: Since the tree is not changed by calling the returned
+-- function, could also write this by creating a random-access array
+-- of the inputs in sorted order, and using bisection searches to
+-- compute the answer.
 empirical_cdf :: forall a. (Ord a) => [a] -> MassiveCDF a
 empirical_cdf xs = lookup where
     tree = fst $ foldl add (M.empty, 0) $ group $ sort xs
